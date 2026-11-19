@@ -1,10 +1,14 @@
-casper
-isolinux
-librsvg2-bin
-linux-image-generic
+live-boot
+live-config
+live-config-systemd
 systemd-sysv
 sudo
 dbus-x11
+network-manager
+network-manager-gnome
+firmware-linux
+firmware-iwlwifi
+firmware-realtek
 xfce4
 xfce4-goodies
 xfce4-whiskermenu-plugin
@@ -19,8 +23,7 @@ lightdm-gtk-greeter
 plank
 picom
 conky-all
-network-manager
-network-manager-gnome
+gsimplecal
 pavucontrol
 pipewire
 pipewire-audio
@@ -37,7 +40,7 @@ git
 vim-tiny
 htop
 btop
-neofetch
+fastfetch
 gnome-disk-utility
 gparted
 cryptsetup
@@ -55,6 +58,7 @@ pkexec
 zenity
 flatpak
 gnome-software
+gnome-software-plugin-deb
 gnome-software-plugin-flatpak
 wine
 wine64

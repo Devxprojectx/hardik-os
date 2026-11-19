@@ -1,159 +1,52 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
-
-[[ "$(dpkg --print-architecture)" == "amd64" ]] || {
-  echo "HARDIK OS currently targets amd64 only."
-  exit 1
-}
-
-for cmd in lb xorriso mksquashfs debootstrap; do
-  command -v "$cmd" >/dev/null || { echo "Missing required command: $cmd"; exit 1; }
-done
-
+[[ "$(dpkg --print-architecture)" == amd64 ]] || { echo "HARDIK OS targets amd64."; exit 1; }
+grep -q '^VERSION_CODENAME=trixie$' /etc/os-release || { echo "Build host must be Debian 13 Trixie."; exit 1; }
+for cmd in lb xorriso mksquashfs debootstrap python3; do command -v "$cmd" >/dev/null || { echo "Missing command: $cmd"; exit 1; }; done
 mkdir -p output
 rm -f output/*.iso output/SHA256SUMS output/build-info.txt output/build.log
 exec > >(tee -a output/build.log) 2>&1
-
-echo "=== HARDIK OS integrated image build ==="
+echo "=== HARDIK OS 0.5.0 / Debian 13 Trixie ==="
 date -u
-df -h /
+cat /etc/os-release
+dpkg-query -W live-build debootstrap xorriso squashfs-tools
 lb clean --purge || true
-
-# Configure live-build once, with all Ubuntu Noble options together.
+rm -rf config/binary config/bootstrap config/chroot config/common config/source
 lb config \
-  --mode ubuntu \
-  --distribution noble \
-  --parent-distribution noble \
-  --initramfs casper \
-  --bootstrap-keyring ubuntu-keyring \
-  --bootstrap-flavour minimal \
-  --architectures amd64 \
-  --linux-flavours generic \
-  --binary-images iso-hybrid \
-  --bootloader syslinux \
-  --syslinux-theme live-build \
-  --archive-areas "main universe multiverse restricted" \
-  --parent-archive-areas "main universe multiverse restricted" \
-  --mirror-bootstrap https://archive.ubuntu.com/ubuntu/ \
-  --mirror-chroot https://archive.ubuntu.com/ubuntu/ \
-  --mirror-binary https://archive.ubuntu.com/ubuntu/ \
-  --security false \
-  --bootappend-live "boot=casper quiet splash username=hardik hostname=hardik-os" \
-  --apt-recommends false
-
-# The selected live-build Syslinux theme does not use Ubuntu's legacy gfxboot bootlogo.
-test -s config/archives/ubuntu-security.list.chroot
-test -s config/archives/ubuntu-security.list.binary
-
-# Ubuntu Noble's bundled ISOLINUX theme has stale Syslinux links. Stage a
-# local copy and repair only the two links using files from Noble packages.
-THEME_SOURCE="/usr/share/live/build/bootloaders/isolinux"
-THEME_TARGET="config/bootloaders/isolinux"
-test -d "$THEME_SOURCE"
-test -e /usr/lib/ISOLINUX/isolinux.bin
-test -e /usr/lib/syslinux/modules/bios/vesamenu.c32
-rm -rf "$THEME_TARGET"
-mkdir -p "$(dirname "$THEME_TARGET")"
-cp -a "$THEME_SOURCE" "$THEME_TARGET"
-ln -sfn /usr/lib/ISOLINUX/isolinux.bin "$THEME_TARGET/isolinux.bin"
-ln -sfn /usr/lib/syslinux/modules/bios/vesamenu.c32 "$THEME_TARGET/vesamenu.c32"
-test -L "$THEME_TARGET/isolinux.bin"
-test -L "$THEME_TARGET/vesamenu.c32"
-
-# Ubuntu's old gfxboot directive requires a bootlogo binary that the modern
-# live-build theme does not ship. Remove that obsolete directive from menus.
-while IFS= read -r -d '' cfg; do
-  sed -i '/gfxboot/Id' "$cfg"
-done < <(find "$THEME_TARGET" -type f \( -name '*.cfg' -o -name '*.cfg.in' \) -print0)
-if grep -Rni 'gfxboot' "$THEME_TARGET"; then
-  echo "Legacy gfxboot directive remains in the Syslinux theme."
-  exit 1
-fi
-
-# Ubuntu's Noble live-build runs local chroot hooks from config/hooks/*.chroot.
-# Keep the hook at that exact level (not in the newer normal/ subdirectory).
-test -x config/hooks/0100-hardik-branding.hook.chroot
-bash -n config/hooks/0100-hardik-branding.hook.chroot
-
-# Guard against Debian-mode package and security-suite leakage.
-if grep -R -nE 'linux-image-amd64|noble/updates' config/chroot config/common config/bootstrap config/binary 2>/dev/null; then
-  echo "Invalid Debian-mode package or security suite leaked into Ubuntu config."
-  exit 1
-fi
-
-# Ubuntu mode with --initramfs casper stages the kernel under binary/casper.
-# live-build 3.0~a57's Syslinux script incorrectly hardcodes binary/live for
-# kernel renaming and menu paths. Patch that exact installed script, and fail
-# early if the upstream implementation is not the one we audited.
-SYSLINUX_SCRIPT="/usr/lib/live/build/lb_binary_syslinux"
-test -f "$SYSLINUX_SCRIPT"
-python3 - "$SYSLINUX_SCRIPT" <<'PY'
-import pathlib
-import sys
-
-path = pathlib.Path(sys.argv[1])
-source = path.read_text()
-replacements = {
-    "binary/live/": "binary/casper/",
-    "/live/vmlinuz": "/casper/vmlinuz",
-    "/live/initrd.img": "/casper/initrd.img",
-}
-for old, new in replacements.items():
-    count = source.count(old)
-    if count == 0:
-        raise SystemExit(f"Refusing unverified live-build patch: {old!r} not found in {path}")
-    source = source.replace(old, new)
-path.write_text(source)
-PY
-# Ubuntu mode attempts legacy gfxboot extraction even with the live-build theme.
-# Disable only that obsolete extraction; the selected theme supplies its own assets.
-python3 - "$SYSLINUX_SCRIPT" <<'PY'
-import pathlib, sys
-p = pathlib.Path(sys.argv[1])
-s = p.read_text()
-patterns = [
-    'Chroot chroot "tar xfz /usr/share/gfxboot-theme-ubuntu/bootlogo.tar.gz -C /root/$(basename ${_SOURCE}).tmp"',
-    'tar xfz /usr/share/gfxboot-theme-ubuntu/bootlogo.tar.gz -C ${_TARGET}',
-]
-found = 0
-for old in patterns:
-    if old in s:
-        s = s.replace(old, ': # HARDIK OS: obsolete gfxboot theme is not used', 1)
-        found += 1
-if found == 0:
-    raise SystemExit("Refusing unverified gfxboot patch: no known extraction command found")
-p.write_text(s)
-print(f"Disabled {found} obsolete gfxboot extraction path(s)")
-PY
-bash -n "$SYSLINUX_SCRIPT"
-grep -nE 'binary/casper/|/casper/vmlinuz|/casper/initrd.img' "$SYSLINUX_SCRIPT"
-if grep -nE 'binary/live/vmlinuz|binary/live/initrd|/live/vmlinuz|/live/initrd.img' "$SYSLINUX_SCRIPT"; then
-  echo "Syslinux script still contains incompatible live/ kernel paths."
-  exit 1
-fi
-
-echo "=== Build configuration ==="
-grep -R -nE 'noble-security|linux-image-generic' config/archives config/package-lists
-echo "=== Building image ==="
+ --ignore-system-defaults \
+ --mode debian --distribution trixie --parent-distribution trixie \
+ --architectures amd64 --linux-flavours amd64 \
+ --binary-images iso-hybrid --bootloaders syslinux --initramfs live-boot \
+ --archive-areas "main contrib non-free non-free-firmware" \
+ --parent-archive-areas "main contrib non-free non-free-firmware" \
+ --mirror-bootstrap https://deb.debian.org/debian/ \
+ --mirror-chroot https://deb.debian.org/debian/ \
+ --mirror-binary https://deb.debian.org/debian/ \
+ --mirror-chroot-security https://security.debian.org/debian-security/ \
+ --mirror-binary-security https://security.debian.org/debian-security/ \
+ --security true --updates true --firmware-chroot true --firmware-binary true \
+ --uefi-secure-boot auto --image-name hardik-os-0.5.0 \
+ --iso-volume HARDIK_OS_050 --iso-application "HARDIK OS 0.5.0 Debian 13" \
+ --bootappend-live "boot=live components username=hardik hostname=hardik-os quiet splash" \
+ --apt-recommends true --debian-installer none
+grep -R -q 'LB_MODE="debian"' config
+grep -R -q 'LB_DISTRIBUTION="trixie"' config
+grep -R -q 'LB_INITRAMFS="live-boot"' config
+if grep -R -nE 'noble|casper|ubuntu-security|gfxboot-theme-ubuntu' config; then echo "Ubuntu-specific configuration detected."; exit 1; fi
 lb build
-
-ISO="$(find . -maxdepth 1 -type f -name '*.iso' -print -quit)"
-[[ -n "$ISO" ]] || { echo "No ISO produced; inspect output/build.log"; exit 1; }
-
-cp "$ISO" output/hardik-os-0.4.0-amd64.iso
+ISO="$(find binary -maxdepth 1 -type f -name '*.iso' -print -quit)"
+[[ -n "$ISO" ]] || { echo "No ISO produced."; exit 1; }
+cp "$ISO" output/hardik-os-0.5.0-amd64.iso
 {
-  echo "HARDIK OS integrated development build"
-  echo "Version: 0.4.0"
-  echo "Base: Ubuntu 24.04 LTS (Noble)"
-  echo "Architecture: amd64"
-  echo "Build UTC: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-  echo "Source commit: ${GITHUB_SHA:-local}"
-  echo "Status: experimental; requires BIOS/UEFI and VM validation."
-  echo "Security: baseline controls only; no unhackable or certification claim."
+ echo "HARDIK OS 0.5.0 — Development Build"
+ echo "Base: Debian 13 Trixie"
+ echo "Architecture: amd64"
+ echo "Build UTC: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+ echo "Source commit: $(git rev-parse HEAD)"
+ echo "Status: experimental live image; installer and hardware validation remain separate acceptance checks."
+ echo "Security: baseline controls only; no unhackable or certification claim."
 } > output/build-info.txt
-
 sha256sum output/*.iso | tee output/SHA256SUMS
 ls -lh output/

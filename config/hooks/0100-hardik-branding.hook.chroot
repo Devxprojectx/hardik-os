@@ -1,26 +1,17 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-
-echo "HARDIK OS: applying desktop branding and baseline security configuration"
-
 cat > /etc/os-release <<'EOF'
-PRETTY_NAME="HARDIK OS 0.4.0 (Development Build)"
+PRETTY_NAME="HARDIK OS 0.5.0 (Debian 13 Trixie)"
 NAME="HARDIK OS"
-VERSION="0.4.0"
-VERSION_ID="0.4.0"
+VERSION="0.5.0"
+VERSION_ID="0.5.0"
 ID=hardik
-ID_LIKE=ubuntu
-UBUNTU_CODENAME=noble
+ID_LIKE=debian
+VERSION_CODENAME=trixie
+DEBIAN_CODENAME=trixie
 EOF
-cat > /etc/issue <<'EOF'
-HARDIK OS 0.4.0 — Development Build
-Ubuntu-based • amd64
-EOF
-
-install -d /etc/skel/.config/autostart /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml /etc/skel/Desktop
-install -d /etc/xdg/picom
-chmod 0755 /usr/local/bin/hardik-center /usr/local/bin/hardik-security-report /usr/local/bin/hardik-app-center /usr/local/bin/hardik-waydroid-setup /usr/local/bin/hardik-security-center
-
+printf '%s\n' "HARDIK OS 0.5.0 — Debian 13 Trixie • amd64" > /etc/issue
+install -d /etc/skel/.config/autostart /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml /etc/skel/.config/xfce4/terminal /etc/skel/.config/plank/dock1/launchers /etc/skel/Desktop /etc/xdg/conky
 cat > /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <channel name="xsettings" version="1.0">
@@ -47,21 +38,40 @@ cat > /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml <<'EO
  </property>
 </channel>
 EOF
+cat > /etc/skel/.config/xfce4/terminal/terminalrc <<'EOF'
+[Configuration]
+FontName=Inter 11
+MiscMenubarDefault=FALSE
+MiscToolbarDefault=FALSE
+ColorForeground=#8BE9E5
+ColorBackground=#0B121A
+ColorCursor=#00E5D4
+EOF
+cat > /etc/xdg/picom.conf <<'EOF'
+backend = "xrender";
+vsync = true;
+shadow = true;
+shadow-radius = 18;
+shadow-opacity = 0.34;
+fading = true;
+fade-in-step = 0.035;
+fade-out-step = 0.035;
+inactive-opacity = 0.94;
+active-opacity = 0.98;
+EOF
 cat > /etc/skel/.config/autostart/plank.desktop <<'EOF'
 [Desktop Entry]
 Type=Application
 Name=HARDIK Dock
 Exec=plank
 OnlyShowIn=XFCE;
-X-GNOME-Autostart-enabled=true
 EOF
 cat > /etc/skel/.config/autostart/picom.desktop <<'EOF'
 [Desktop Entry]
 Type=Application
-Name=HARDIK Compositor
+Name=HARDIK Glass Effects
 Exec=picom --config /etc/xdg/picom.conf
 OnlyShowIn=XFCE;
-X-GNOME-Autostart-enabled=true
 EOF
 cat > /etc/skel/.config/autostart/conky.desktop <<'EOF'
 [Desktop Entry]
@@ -69,47 +79,18 @@ Type=Application
 Name=HARDIK System Monitor
 Exec=conky --config=/etc/xdg/conky/conky.conf
 OnlyShowIn=XFCE;
-X-GNOME-Autostart-enabled=true
 EOF
-cat > /etc/xdg/picom.conf <<'EOF'
-backend = "xrender";
-vsync = true;
-shadow = true;
-shadow-radius = 14;
-shadow-opacity = 0.30;
-fading = true;
-fade-in-step = 0.03;
-fade-out-step = 0.03;
-EOF
-
-# Install launchers into every new user's desktop.
-for desktop in hardik-center hardik-app-center hardik-security-center hardik-waydroid; do
-  case "$desktop" in
-    hardik-center) file=/usr/share/applications/hardik-center.desktop ;;
-    hardik-app-center) file=/usr/share/applications/hardik-app-center.desktop ;;
-    hardik-security-center) file=/usr/share/applications/hardik-security-center.desktop ;;
-    hardik-waydroid) file=/usr/share/applications/hardik-waydroid.desktop ;;
-  esac
-  if [ -f "$file" ]; then cp "$file" /etc/skel/Desktop/; chmod 0755 "/etc/skel/Desktop/$(basename "$file")"; fi
-done
-
-# Default-deny inbound firewall. It is enabled on installed systems at first boot.
+if [ -f /usr/share/applications/thunar.desktop ]; then cp /usr/share/applications/thunar.desktop /etc/skel/.config/plank/dock1/launchers/thunar.dockitem; fi
+if [ -f /usr/share/applications/xfce4-terminal.desktop ]; then cp /usr/share/applications/xfce4-terminal.desktop /etc/skel/.config/plank/dock1/launchers/terminal.dockitem; fi
 if [ -f /etc/default/ufw ]; then
-  sed -i 's/^DEFAULT_INPUT_POLICY=.*/DEFAULT_INPUT_POLICY="DROP"/' /etc/default/ufw
-  sed -i 's/^DEFAULT_OUTPUT_POLICY=.*/DEFAULT_OUTPUT_POLICY="ACCEPT"/' /etc/default/ufw
-  sed -i 's/^DEFAULT_FORWARD_POLICY=.*/DEFAULT_FORWARD_POLICY="DROP"/' /etc/default/ufw
-  sed -i 's/^IPV6=.*/IPV6=yes/' /etc/default/ufw
+ sed -i 's/^DEFAULT_INPUT_POLICY=.*/DEFAULT_INPUT_POLICY="DROP"/' /etc/default/ufw
+ sed -i 's/^DEFAULT_OUTPUT_POLICY=.*/DEFAULT_OUTPUT_POLICY="ACCEPT"/' /etc/default/ufw
+ sed -i 's/^DEFAULT_FORWARD_POLICY=.*/DEFAULT_FORWARD_POLICY="DROP"/' /etc/default/ufw
 fi
-if [ -f /etc/ufw/ufw.conf ]; then sed -i 's/^ENABLED=.*/ENABLED=yes/' /etc/ufw/ufw.conf; fi
-
-systemctl enable ufw.service
-systemctl enable apparmor.service
-systemctl enable auditd.service
-systemctl enable unattended-upgrades.service
+systemctl enable ufw.service apparmor.service auditd.service unattended-upgrades.service
 cat > /etc/apt/apt.conf.d/20auto-upgrades <<'EOF'
 APT::Periodic::Update-Package-Lists "1";
 APT::Periodic::Unattended-Upgrade "1";
 EOF
-
 install -d -m 0755 /var/lib/hardik-os
-printf '%s\n' "branding-hook=executed" "version=0.4.0" "desktop=xfce-plank-picom-conky" > /var/lib/hardik-os/build-hooks
+printf '%s\n' "version=0.5.0" "base=debian-trixie" > /var/lib/hardik-os/build-hooks
