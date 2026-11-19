@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+set -u
+
+status() {
+  local label="$1"
+  local result="$2"
+  printf "%-34s %s\n" "$label" "$result"
+}
+
+echo "HARDIK OS — Security Status"
+echo "This report checks current configuration; it is not a security certification."
+echo
+
+if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q "Status: active"; then
+  status "Firewall (UFW):" "ACTIVE"
+else
+  status "Firewall (UFW):" "NOT CONFIRMED ACTIVE"
+fi
+
+if command -v aa-enabled >/dev/null 2>&1 && aa-enabled >/dev/null 2>&1; then
+  status "AppArmor:" "ENABLED"
+else
+  status "AppArmor:" "NOT ENABLED / UNAVAILABLE"
+fi
+
+if [ -f /etc/apt/apt.conf.d/20auto-upgrades ] && grep -q 'Update-Package-Lists "1"' /etc/apt/apt.conf.d/20auto-upgrades && grep -q 'Unattended-Upgrade "1"' /etc/apt/apt.conf.d/20auto-upgrades; then
+  status "Automatic security updates:" "CONFIGURED"
+else
+  status "Automatic security updates:" "NOT CONFIGURED"
+fi
+
+if command -v clamscan >/dev/null 2>&1; then
+  status "ClamAV scanner:" "INSTALLED (ON-DEMAND)"
+else
+  status "ClamAV scanner:" "NOT INSTALLED"
+fi
+
+root_source="$(findmnt -n -o SOURCE / 2>/dev/null || true)"
+if [[ "$root_source" == /dev/mapper/* ]]; then
+  root_type="$(lsblk -sno TYPE "$root_source" 2>/dev/null | tail -n 1 || true)"
+  if [[ "$root_type" == "crypt" ]]; then
+    status "Root disk encryption:" "LUKS/DM-CRYPT DETECTED"
+  else
+    status "Root disk encryption:" "NOT VERIFIED"
+  fi
+else
+  status "Root disk encryption:" "NOT DETECTED (LIVE/OTHER ROOT)"
+fi
+
+echo
+echo "Important:"
+echo "- A scanner is not the same as real-time malware protection."
+echo "- Encryption tools do not automatically encrypt your disk."
+echo "- Keep the system updated and use trusted software sources."
+echo "- No operating system is unhackable."
