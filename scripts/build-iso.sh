@@ -44,11 +44,7 @@ lb config \
   --bootappend-live "boot=casper quiet splash username=hardik hostname=hardik-os" \
   --apt-recommends false
 
-# These overlays are copied into the chroot before the binary/bootloader stage.
-GFXBOOT_ARCHIVE="config/includes.chroot/usr/share/gfxboot-theme-ubuntu/bootlogo.tar.gz"
-test -s "$GFXBOOT_ARCHIVE"
-tar -tzf "$GFXBOOT_ARCHIVE" >/dev/null
-
+# The selected live-build Syslinux theme does not use Ubuntu's legacy gfxboot bootlogo.
 test -s config/archives/ubuntu-security.list.chroot
 test -s config/archives/ubuntu-security.list.binary
 
@@ -101,6 +97,26 @@ for old, new in replacements.items():
         raise SystemExit(f"Refusing unverified live-build patch: {old!r} not found in {path}")
     source = source.replace(old, new)
 path.write_text(source)
+PY
+# Ubuntu mode attempts legacy gfxboot extraction even with the live-build theme.
+# Disable only that obsolete extraction; the selected theme supplies its own assets.
+python3 - "$SYSLINUX_SCRIPT" <<'PY'
+import pathlib, sys
+p = pathlib.Path(sys.argv[1])
+s = p.read_text()
+patterns = [
+    'Chroot chroot "tar xfz /usr/share/gfxboot-theme-ubuntu/bootlogo.tar.gz -C /root/$(basename ${_SOURCE}).tmp"',
+    'tar xfz /usr/share/gfxboot-theme-ubuntu/bootlogo.tar.gz -C ${_TARGET}',
+]
+found = 0
+for old in patterns:
+    if old in s:
+        s = s.replace(old, ': # HARDIK OS: obsolete gfxboot theme is not used', 1)
+        found += 1
+if found == 0:
+    raise SystemExit("Refusing unverified gfxboot patch: no known extraction command found")
+p.write_text(s)
+print(f"Disabled {found} obsolete gfxboot extraction path(s)")
 PY
 bash -n "$SYSLINUX_SCRIPT"
 grep -nE 'binary/casper/|/casper/vmlinuz|/casper/initrd.img' "$SYSLINUX_SCRIPT"

@@ -9,6 +9,7 @@ while true; do
     "Open Ubuntu Software (DEB / Flatpak)" \
     "Install Bottles (Windows app manager)" \
     "Install Windows compatibility tools" \
+    "Open Uptodown Android app catalog" \
     "Set up Android apps (Waydroid)" \
     "Controller / key mapper" \
     "Open package manager (APT)" \
@@ -22,6 +23,9 @@ while true; do
         flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
         flatpak install --user -y flathub com.usebottles.bottles
       ) | zenity --progress --pulsate --auto-close --no-cancel --title="Installing Bottles" --text="Downloading Bottles from Flathub..."
+      ;;
+    "Open Uptodown Android app catalog")
+      xdg-open https://en.uptodown.com/android >/dev/null 2>&1 &
       ;;
     "Install Windows compatibility tools")
       xfce4-terminal --hold --command="bash -lc 'sudo apt-get update && sudo apt-get install -y wine wine64 winetricks; echo; read -p "Press Enter to close"'" &
