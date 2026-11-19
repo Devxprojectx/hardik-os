@@ -22,9 +22,7 @@ date -u
 df -h /
 lb clean --purge || true
 
-# Use Ubuntu mode so live-build selects Ubuntu's generic kernel and Noble
-# repository conventions. A local ISOLINUX theme below fixes stale upstream
-# absolute symlinks in the Noble live-build theme.
+# Configure live-build once, with all Ubuntu Noble options together.
 lb config \
   --mode ubuntu \
   --distribution noble \
@@ -46,12 +44,16 @@ lb config \
   --bootappend-live "boot=casper quiet splash username=hardik hostname=hardik-os" \
   --apt-recommends false
 
+# These overlays are copied into the chroot before the binary/bootloader stage.
+GFXBOOT_ARCHIVE="config/includes.chroot/usr/share/gfxboot-theme-ubuntu/bootlogo.tar.gz"
+test -s "$GFXBOOT_ARCHIVE"
+tar -tzf "$GFXBOOT_ARCHIVE" >/dev/null
+
 test -s config/archives/ubuntu-security.list.chroot
 test -s config/archives/ubuntu-security.list.binary
 
-# Noble's bundled live-build ISOLINUX theme contains links that point to
-# obsolete Syslinux locations. Stage a local copy and point the two affected
-# files at the actual paths provided by Ubuntu's isolinux/syslinux-common.
+# Ubuntu Noble's bundled ISOLINUX theme has stale Syslinux links. Stage a
+# local copy and repair only the two links using files from Noble packages.
 THEME_SOURCE="/usr/share/live/build/bootloaders/isolinux"
 THEME_TARGET="config/bootloaders/isolinux"
 test -d "$THEME_SOURCE"
@@ -64,13 +66,13 @@ ln -sfn /usr/lib/ISOLINUX/isolinux.bin "$THEME_TARGET/isolinux.bin"
 ln -sfn /usr/lib/syslinux/modules/bios/vesamenu.c32 "$THEME_TARGET/vesamenu.c32"
 test -L "$THEME_TARGET/isolinux.bin"
 test -L "$THEME_TARGET/vesamenu.c32"
-echo "=== Corrected ISOLINUX theme links ==="
-readlink "$THEME_TARGET/isolinux.bin"
-readlink "$THEME_TARGET/vesamenu.c32"
 
-chmod 0755 config/hooks/normal/*.hook.chroot
+# Ubuntu's Noble live-build runs local chroot hooks from config/hooks/*.chroot.
+# Keep the hook at that exact level (not in the newer normal/ subdirectory).
+test -x config/hooks/0100-hardik-branding.hook.chroot
+bash -n config/hooks/0100-hardik-branding.hook.chroot
 
-# Guard against the previous Debian-mode package and security suite leakage.
+# Guard against Debian-mode package and security-suite leakage.
 if grep -R -nE 'linux-image-amd64|noble/updates' config/chroot config/common config/bootstrap config/binary 2>/dev/null; then
   echo "Invalid Debian-mode package or security suite leaked into Ubuntu config."
   exit 1
@@ -92,7 +94,7 @@ cp "$ISO" output/hardik-os-0.3.0-amd64.iso
   echo "Architecture: amd64"
   echo "Build UTC: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
   echo "Source commit: ${GITHUB_SHA:-local}"
-  echo "Status: experimental; requires VM and hardware validation."
+  echo "Status: experimental; requires BIOS/UEFI and VM validation."
   echo "Security: baseline controls only; no unhackable or certification claim."
 } > output/build-info.txt
 

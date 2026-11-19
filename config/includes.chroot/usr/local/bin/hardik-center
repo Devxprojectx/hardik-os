@@ -33,7 +33,7 @@ while true; do
       xfce4-terminal >/dev/null 2>&1 &
       ;;
     "About HARDIK OS")
-      zenity --info --title="About HARDIK OS" --width=440 --text="HARDIK OS 0.2.0\nUbuntu 24.04 LTS • amd64\nExperimental development build\n\nThis is not a finished installer or a security-certified operating system."
+      zenity --info --title="About HARDIK OS" --width=440 --text="HARDIK OS 0.3.0\nUbuntu 24.04 LTS • amd64\nExperimental development build\n\nThis is not a finished installer or a security-certified operating system."
       ;;
   esac
 done
