@@ -18,7 +18,7 @@ lb config \
  --ignore-system-defaults \
  --mode debian --distribution trixie --parent-distribution trixie \
  --architectures amd64 --linux-flavours amd64 \
- --binary-images iso-hybrid --bootloaders syslinux --initramfs live-boot \
+ --binary-images iso-hybrid --bootloaders "syslinux grub-efi" --initramfs live-boot \
  --archive-areas "main contrib non-free non-free-firmware" \
  --parent-archive-areas "main contrib non-free non-free-firmware" \
  --mirror-bootstrap https://deb.debian.org/debian/ \
