@@ -23,8 +23,8 @@ df -h /
 lb clean --purge || true
 
 # Use Ubuntu mode so live-build selects Ubuntu's generic kernel and Noble
-# repository conventions. The built-in live-build theme avoids the obsolete
-# ubuntu-oneiric theme and its removed gfxboot package.
+# repository conventions. A local ISOLINUX theme below fixes stale upstream
+# absolute symlinks in the Noble live-build theme.
 lb config \
   --mode ubuntu \
   --distribution noble \
@@ -48,9 +48,29 @@ lb config \
 
 test -s config/archives/ubuntu-security.list.chroot
 test -s config/archives/ubuntu-security.list.binary
+
+# Noble's bundled live-build ISOLINUX theme contains links that point to
+# obsolete Syslinux locations. Stage a local copy and point the two affected
+# files at the actual paths provided by Ubuntu's isolinux/syslinux-common.
+THEME_SOURCE="/usr/share/live/build/bootloaders/isolinux"
+THEME_TARGET="config/bootloaders/isolinux"
+test -d "$THEME_SOURCE"
+test -e /usr/lib/ISOLINUX/isolinux.bin
+test -e /usr/lib/syslinux/modules/bios/vesamenu.c32
+rm -rf "$THEME_TARGET"
+mkdir -p "$(dirname "$THEME_TARGET")"
+cp -a "$THEME_SOURCE" "$THEME_TARGET"
+ln -sfn /usr/lib/ISOLINUX/isolinux.bin "$THEME_TARGET/isolinux.bin"
+ln -sfn /usr/lib/syslinux/modules/bios/vesamenu.c32 "$THEME_TARGET/vesamenu.c32"
+test -L "$THEME_TARGET/isolinux.bin"
+test -L "$THEME_TARGET/vesamenu.c32"
+echo "=== Corrected ISOLINUX theme links ==="
+readlink "$THEME_TARGET/isolinux.bin"
+readlink "$THEME_TARGET/vesamenu.c32"
+
 chmod 0755 config/hooks/normal/*.hook.chroot
 
-# Guard against the previous Debian-mode kernel leak before the long build.
+# Guard against the previous Debian-mode package and security suite leakage.
 if grep -R -nE 'linux-image-amd64|noble/updates' config/chroot config/common config/bootstrap config/binary 2>/dev/null; then
   echo "Invalid Debian-mode package or security suite leaked into Ubuntu config."
   exit 1
