@@ -1,55 +1,36 @@
 #!/usr/bin/env bash
 set -u
-
-status() {
-  local label="$1"
-  local result="$2"
-  printf "%-34s %s\n" "$label" "$result"
-}
-
-echo "HARDIK OS — Security Status"
-echo "This report checks current configuration; it is not a security certification."
+section() { printf '\n=== %s ===\n' "$1"; }
+printf 'HARDIK OS SECURITY CENTER\nVersion 0.4.0\n'
+section "1 / Secure Boot"
+if command -v mokutil >/dev/null && mokutil --sb-state 2>/dev/null; then :; else echo "Status depends on firmware; Secure Boot is not enforced by this image."; fi
+section "2 / Disk encryption"
+lsblk -o NAME,TYPE,FSTYPE,MOUNTPOINT 2>/dev/null | head -30 || true
+echo "LUKS tools installed; full-disk encryption must be selected/configured during installation."
+section "3 / Kernel and updates"
+uname -r
+if command -v apt-get >/dev/null; then apt-get -s upgrade 2>/dev/null | tail -2; fi
+section "4 / AppArmor"
+if command -v aa-status >/dev/null; then aa-status 2>&1 | head -12; else echo "Not available"; fi
+section "5 / Firewall"
+ufw status verbose 2>&1 || true
+section "6 / Network protection"
+echo "NetworkManager active; DNS policy depends on the selected network."
+section "7 / Malware scanner"
+if command -v clamscan >/dev/null; then clamscan --version; else echo "ClamAV unavailable"; fi
+section "8 / Package verification"
+dpkg --audit 2>&1 || true
+section "9 / Application sandboxing"
+command -v firejail || true
+section "10 / Access control"
+id
+section "11 / Audit monitoring"
+systemctl is-active auditd 2>/dev/null || true
+section "12 / Privacy"
+echo "Review browser and application permissions in their settings."
+section "13 / Updates"
+systemctl is-enabled unattended-upgrades 2>/dev/null || true
+section "14 / Recovery"
+echo "Live USB recovery tools: GParted, GNOME Disks and terminal. Keep separate backups."
 echo
-
-if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q "Status: active"; then
-  status "Firewall (UFW):" "ACTIVE"
-else
-  status "Firewall (UFW):" "NOT CONFIRMED ACTIVE"
-fi
-
-if command -v aa-enabled >/dev/null 2>&1 && aa-enabled >/dev/null 2>&1; then
-  status "AppArmor:" "ENABLED"
-else
-  status "AppArmor:" "NOT ENABLED / UNAVAILABLE"
-fi
-
-if [ -f /etc/apt/apt.conf.d/20auto-upgrades ] && grep -q 'Update-Package-Lists "1"' /etc/apt/apt.conf.d/20auto-upgrades && grep -q 'Unattended-Upgrade "1"' /etc/apt/apt.conf.d/20auto-upgrades; then
-  status "Automatic security updates:" "CONFIGURED"
-else
-  status "Automatic security updates:" "NOT CONFIGURED"
-fi
-
-if command -v clamscan >/dev/null 2>&1; then
-  status "ClamAV scanner:" "INSTALLED (ON-DEMAND)"
-else
-  status "ClamAV scanner:" "NOT INSTALLED"
-fi
-
-root_source="$(findmnt -n -o SOURCE / 2>/dev/null || true)"
-if [[ "$root_source" == /dev/mapper/* ]]; then
-  root_types="$(lsblk -sno TYPE "$root_source" 2>/dev/null || true)"
-  if printf '%s\n' "$root_types" | grep -qx "crypt"; then
-    status "Root disk encryption:" "LUKS/DM-CRYPT DETECTED"
-  else
-    status "Root disk encryption:" "NOT VERIFIED"
-  fi
-else
-  status "Root disk encryption:" "NOT DETECTED (LIVE/OTHER ROOT)"
-fi
-
-echo
-echo "Important:"
-echo "- A scanner is not the same as real-time malware protection."
-echo "- Encryption tools do not automatically encrypt your disk."
-echo "- Keep the system updated and use trusted software sources."
-echo "- No operating system is unhackable."
+echo "IMPORTANT: These are 14 planned protection areas, not a certification or claim of being unhackable. Several require user setup, firmware support or an installed system."

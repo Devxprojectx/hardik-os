@@ -7,6 +7,9 @@ sudo
 dbus-x11
 xfce4
 xfce4-goodies
+xfce4-whiskermenu-plugin
+xfce4-pulseaudio-plugin
+xfce4-systemload-plugin
 xfce4-terminal
 thunar
 thunar-archive-plugin
@@ -15,6 +18,7 @@ lightdm
 lightdm-gtk-greeter
 plank
 picom
+conky-all
 network-manager
 network-manager-gnome
 pavucontrol
@@ -32,6 +36,8 @@ wget
 git
 vim-tiny
 htop
+btop
+neofetch
 gnome-disk-utility
 gparted
 cryptsetup
@@ -40,9 +46,19 @@ apparmor-utils
 ufw
 unattended-upgrades
 clamav
+clamav-daemon
 firejail
+auditd
+lynis
 policykit-1
 pkexec
 zenity
+flatpak
+gnome-software
+gnome-software-plugin-flatpak
+wine
+wine64
+winetricks
+input-remapper
 unzip
 zip

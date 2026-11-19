@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+command -v zenity >/dev/null || { echo "Install zenity to use HARDIK App Center."; exit 1; }
+
+while true; do
+  choice="$(zenity --list --title="HARDIK App Center" \
+    --text="Install and manage applications" --column="Category" \
+    "Open Ubuntu Software (DEB / Flatpak)" \
+    "Install Bottles (Windows app manager)" \
+    "Install Windows compatibility tools" \
+    "Set up Android apps (Waydroid)" \
+    "Controller / key mapper" \
+    "Open package manager (APT)" \
+    --width=620 --height=390)" || exit 0
+  case "$choice" in
+    "Open Ubuntu Software (DEB / Flatpak)")
+      gnome-software >/dev/null 2>&1 &
+      ;;
+    "Install Bottles (Windows app manager)")
+      (
+        flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+        flatpak install --user -y flathub com.usebottles.bottles
+      ) | zenity --progress --pulsate --auto-close --no-cancel --title="Installing Bottles" --text="Downloading Bottles from Flathub..."
+      ;;
+    "Install Windows compatibility tools")
+      xfce4-terminal --hold --command="bash -lc 'sudo apt-get update && sudo apt-get install -y wine wine64 winetricks; echo; read -p "Press Enter to close"'" &
+      ;;
+    "Set up Android apps (Waydroid)")
+      hardik-waydroid-setup
+      ;;
+    "Controller / key mapper")
+      if command -v input-remapper-gtk >/dev/null; then input-remapper-gtk >/dev/null 2>&1 &
+      else zenity --info --title="Key mapper" --text="Install input-remapper from Ubuntu Software first."; fi
+      ;;
+    "Open package manager (APT)")
+      xfce4-terminal --command="sudo apt install" &
+      ;;
+  esac
+done

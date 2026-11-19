@@ -1,39 +1,19 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-
-if ! command -v zenity >/dev/null 2>&1; then
-  echo "HARDIK Center requires zenity. Run hardik-security-report for text status."
-  exit 1
-fi
-
+command -v zenity >/dev/null || exit 1
 while true; do
-  choice="$(zenity --list \
-    --title="HARDIK OS Center" \
-    --text="Welcome to HARDIK OS. Choose a system tool." \
-    --column="HARDIK OS" \
-    "Security status" \
-    "System settings" \
-    "File manager" \
-    "Terminal" \
-    "About HARDIK OS" \
-    --width=560 --height=360)" || exit 0
-
-  case "$choice" in
-    "Security status")
-      report="$(hardik-security-report)"
-      zenity --text-info --title="HARDIK OS Security Status" --filename=<(printf '%s\n' "$report") --width=700 --height=520
-      ;;
-    "System settings")
-      xfce4-settings-manager >/dev/null 2>&1 &
-      ;;
-    "File manager")
-      thunar >/dev/null 2>&1 &
-      ;;
-    "Terminal")
-      xfce4-terminal >/dev/null 2>&1 &
-      ;;
-    "About HARDIK OS")
-      zenity --info --title="About HARDIK OS" --width=440 --text="HARDIK OS 0.3.0\nUbuntu 24.04 LTS • amd64\nExperimental development build\n\nThis is not a finished installer or a security-certified operating system."
-      ;;
-  esac
+ choice="$(zenity --list --title="HARDIK OS" --text="Control your system" --column="HARDIK" \
+  "App Center" "Security Center" "System Settings" "File Manager" "Terminal" "Android Apps" "About HARDIK OS" \
+  --width=560 --height=420)" || exit 0
+ case "$choice" in
+  "App Center") hardik-app-center ;;
+  "Security Center") hardik-security-center ;;
+  "System Settings") xfce4-settings-manager >/dev/null 2>&1 & ;;
+  "File Manager") thunar >/dev/null 2>&1 & ;;
+  "Terminal") xfce4-terminal >/dev/null 2>&1 & ;;
+  "Android Apps") hardik-waydroid-setup ;;
+  "About HARDIK OS")
+   zenity --info --title="About HARDIK OS" --width=480 --text="HARDIK OS 0.4.0\nUbuntu 24.04 LTS • amd64\n\nChrome, XFCE desktop, app center, Windows app support, optional Waydroid setup and security tools.\n\nExperimental development build: hardware compatibility and installation still require testing."
+   ;;
+ esac
 done

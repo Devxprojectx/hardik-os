@@ -1,0 +1,10 @@
+#!/bin/sh
+set -eu
+
+echo "HARDIK OS: installing Google Chrome"
+tmp_deb=/tmp/google-chrome-stable_current_amd64.deb
+curl -fL --retry 3 --retry-delay 2 \
+  https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
+  -o "$tmp_deb"
+apt-get install -y --no-install-recommends "$tmp_deb"
+rm -f "$tmp_deb"
