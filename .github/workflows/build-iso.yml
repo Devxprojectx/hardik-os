@@ -8,7 +8,7 @@ permissions:
   contents: read
 concurrency:
   group: hardik-os-iso-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   build-iso:
     runs-on: ubuntu-24.04
