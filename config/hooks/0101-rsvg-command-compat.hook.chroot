@@ -1,9 +1,13 @@
-#!/bin/sh
-set -eu
+#!/usr/bin/python3
+"""Translate the legacy live-build rsvg syntax to Noble's rsvg-convert CLI."""
+import os
+import sys
 
-# Noble ships the librsvg CLI as rsvg-convert, while the legacy live-build
-# Syslinux theme invokes it through the historical command name "rsvg".
-# Create the compatibility name in the image chroot before binary bootloader
-# generation. The target is installed by live-build's Syslinux dependencies.
-mkdir -p /usr/local/bin
-ln -sfn /usr/bin/rsvg-convert /usr/local/bin/rsvg
+args = sys.argv[1:]
+if len(args) < 2:
+    os.execv("/usr/bin/rsvg-convert", ["rsvg-convert", *args])
+
+# Old live-build passes: options..., input.svg, output.png
+# Modern librsvg requires: options..., input.svg, -o, output.png
+converted = [*args[:-2], args[-2], "-o", args[-1]]
+os.execv("/usr/bin/rsvg-convert", ["rsvg-convert", *converted])
