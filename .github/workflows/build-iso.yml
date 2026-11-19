@@ -52,6 +52,7 @@ jobs:
           bash -n config/includes.chroot/usr/local/bin/hardik-security-report
           awk 'NF && $1 !~ /^[a-z0-9][a-z0-9+.-]*$/ { print "Invalid package-list entry at line " NR ": " $0; bad=1 } END { exit bad }' config/package-lists/hardik.list.chroot
           test -s config/archives/ubuntu-security.list.chroot
+          grep -qx 'isolinux' config/package-lists/hardik.list.chroot
           test -s config/archives/ubuntu-security.list.binary
           curl -fsSI --retry 3 --retry-delay 2 https://security.ubuntu.com/ubuntu/dists/noble-security/InRelease
 
