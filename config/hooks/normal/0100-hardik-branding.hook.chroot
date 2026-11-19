@@ -1,0 +1,42 @@
+#!/bin/bash
+set -e
+cat > /etc/os-release <<'EOF'
+PRETTY_NAME="HARDIK OS (Development Build)"
+NAME="HARDIK OS"
+VERSION="0.1.0"
+VERSION_ID="0.1.0"
+ID=hardik
+ID_LIKE=ubuntu
+UBUNTU_CODENAME=noble
+EOF
+cat > /etc/issue <<'EOF'
+HARDIK OS — Development Build
+Ubuntu-based • amd64
+EOF
+mkdir -p /etc/skel/.config/autostart
+cat > /etc/skel/.config/autostart/plank.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=Hardik Dock
+Exec=plank
+OnlyShowIn=XFCE;
+X-GNOME-Autostart-enabled=true
+EOF
+cat > /etc/skel/.config/autostart/picom.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=Hardik Compositor
+Exec=picom --config /etc/xdg/picom.conf
+OnlyShowIn=XFCE;
+X-GNOME-Autostart-enabled=true
+EOF
+cat > /etc/xdg/picom.conf <<'EOF'
+backend = "glx";
+vsync = true;
+shadow = true;
+shadow-radius = 14;
+shadow-opacity = 0.28;
+fading = true;
+fade-in-step = 0.03;
+fade-out-step = 0.03;
+EOF
