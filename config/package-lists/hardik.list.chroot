@@ -53,7 +53,7 @@ clamav-daemon
 firejail
 auditd
 lynis
-policykit-1
+polkitd
 pkexec
 zenity
 flatpak
