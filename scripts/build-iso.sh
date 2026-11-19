@@ -63,6 +63,16 @@ ln -sfn /usr/lib/syslinux/modules/bios/vesamenu.c32 "$THEME_TARGET/vesamenu.c32"
 test -L "$THEME_TARGET/isolinux.bin"
 test -L "$THEME_TARGET/vesamenu.c32"
 
+# Ubuntu's old gfxboot directive requires a bootlogo binary that the modern
+# live-build theme does not ship. Remove that obsolete directive from menus.
+while IFS= read -r -d '' cfg; do
+  sed -i '/gfxboot/Id' "$cfg"
+done < <(find "$THEME_TARGET" -type f \( -name '*.cfg' -o -name '*.cfg.in' \) -print0)
+if grep -Rni 'gfxboot' "$THEME_TARGET"; then
+  echo "Legacy gfxboot directive remains in the Syslinux theme."
+  exit 1
+fi
+
 # Ubuntu's Noble live-build runs local chroot hooks from config/hooks/*.chroot.
 # Keep the hook at that exact level (not in the newer normal/ subdirectory).
 test -x config/hooks/0100-hardik-branding.hook.chroot
