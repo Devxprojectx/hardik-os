@@ -1,45 +1,64 @@
 name: Build HARDIK OS ISO
+
 on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ["config/**", "scripts/**", ".github/workflows/build-iso.yml", "README.md"]
+    paths:
+      - "config/**"
+      - "scripts/**"
+      - ".github/workflows/build-iso.yml"
+      - "README.md"
+      - "docs/**"
+
 permissions:
   contents: read
+
 concurrency:
   group: hardik-os-iso-${{ github.ref }}
   cancel-in-progress: true
+
 jobs:
   build-iso:
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     steps:
       - uses: actions/checkout@v4
+
       - name: Show runner resources
         run: |
           nproc
           free -h
           df -h /
+
       - name: Reclaim runner disk
         run: |
           sudo rm -rf /usr/local/lib/android /opt/hostedtoolcache/CodeQL
           sudo docker image prune --all --force || true
           sudo apt-get clean
           df -h /
+
       - name: Install build dependencies
         run: |
           sudo apt-get update
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends live-build debootstrap xorriso squashfs-tools grub-pc-bin grub-efi-amd64-bin mtools dosfstools isolinux syslinux-common rsync curl wget ca-certificates
+
       - name: Build ISO
-        run: sudo bash scripts/build-iso.sh
-      - name: Verify output
+        run: sudo -E bash scripts/build-iso.sh
+
+      - name: Verify ISO
+        if: success()
         run: |
           set -eux
-          test -s output/hardik-os-0.1.0-amd64.iso
-          sha256sum output/*.iso | tee output/SHA256SUMS
-      - uses: actions/upload-artifact@v4
+          test -s output/hardik-os-0.2.0-amd64.iso
+          file output/hardik-os-0.2.0-amd64.iso
+          sha256sum -c output/SHA256SUMS
+
+      - name: Upload ISO
+        if: success()
+        uses: actions/upload-artifact@v4
         with:
-          name: hardik-os-iso
+          name: hardik-os-0.2.0-iso
           path: |
             output/*.iso
             output/SHA256SUMS
@@ -48,3 +67,21 @@ jobs:
           if-no-files-found: error
           compression-level: 0
           retention-days: 14
+
+      - name: Preserve build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hardik-os-build-diagnostics
+          path: |
+            output/build.log
+            output/build-info.txt
+          if-no-files-found: warn
+          compression-level: 6
+          retention-days: 7
+
+      - name: Final runner disk report
+        if: always()
+        run: |
+          df -h /
+          free -h
