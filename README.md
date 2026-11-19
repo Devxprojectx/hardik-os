@@ -18,7 +18,7 @@ Failed builds also upload **hardik-os-build-diagnostics** when a build log exist
 - HARDIK OS product identity and desktop launcher.
 - HARDIK Center with a live security-status report.
 - Baseline UFW firewall policy, AppArmor service enablement and unattended security updates.
-- APT/DPKG, Flatpak-ready Linux desktop foundations, archive tools and disk utilities.
+- APT/DPKG tools, archive utilities and disk-management tools.
 - Cryptsetup support for manual encryption workflows.
 
 ## Security honesty
