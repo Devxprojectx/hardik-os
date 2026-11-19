@@ -1,9 +1,0 @@
-[Desktop Entry]
-Version=1.0
-Type=Application
-Name=Android Apps Setup
-Comment=Install Waydroid Android app compatibility
-Exec=hardik-waydroid-setup
-Icon=phone
-Terminal=false
-Categories=System;Emulator;
