@@ -78,6 +78,37 @@ if grep -R -nE 'linux-image-amd64|noble/updates' config/chroot config/common con
   exit 1
 fi
 
+# Ubuntu mode with --initramfs casper stages the kernel under binary/casper.
+# live-build 3.0~a57's Syslinux script incorrectly hardcodes binary/live for
+# kernel renaming and menu paths. Patch that exact installed script, and fail
+# early if the upstream implementation is not the one we audited.
+SYSLINUX_SCRIPT="/usr/lib/live/build/lb_binary_syslinux"
+test -f "$SYSLINUX_SCRIPT"
+python3 - "$SYSLINUX_SCRIPT" <<'PY'
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+source = path.read_text()
+replacements = {
+    "binary/live/": "binary/casper/",
+    "/live/vmlinuz": "/casper/vmlinuz",
+    "/live/initrd.img": "/casper/initrd.img",
+}
+for old, new in replacements.items():
+    count = source.count(old)
+    if count == 0:
+        raise SystemExit(f"Refusing unverified live-build patch: {old!r} not found in {path}")
+    source = source.replace(old, new)
+path.write_text(source)
+PY
+bash -n "$SYSLINUX_SCRIPT"
+grep -nE 'binary/casper/|/casper/vmlinuz|/casper/initrd.img' "$SYSLINUX_SCRIPT"
+if grep -nE 'binary/live/vmlinuz|binary/live/initrd|/live/vmlinuz|/live/initrd.img' "$SYSLINUX_SCRIPT"; then
+  echo "Syslinux script still contains incompatible live/ kernel paths."
+  exit 1
+fi
+
 echo "=== Build configuration ==="
 grep -R -nE 'noble-security|linux-image-generic' config/archives config/package-lists
 echo "=== Building image ==="
