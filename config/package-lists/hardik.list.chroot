@@ -35,6 +35,7 @@ papirus-icon-theme
 adwaita-icon-theme
 arc-theme
 curl
+ca-certificates
 wget
 git
 vim-tiny

@@ -21,10 +21,10 @@ lb config \
  --binary-images iso-hybrid --bootloaders "syslinux grub-efi" --initramfs live-boot \
  --archive-areas "main contrib non-free non-free-firmware" \
  --parent-archive-areas "main contrib non-free non-free-firmware" \
- --mirror-bootstrap https://deb.debian.org/debian/ \
- --mirror-chroot https://deb.debian.org/debian/ \
+ --mirror-bootstrap http://deb.debian.org/debian/ \
+ --mirror-chroot http://deb.debian.org/debian/ \
  --mirror-binary https://deb.debian.org/debian/ \
- --mirror-chroot-security https://security.debian.org/debian-security/ \
+ --mirror-chroot-security http://security.debian.org/debian-security/ \
  --mirror-binary-security https://security.debian.org/debian-security/ \
  --security true --updates true --firmware-chroot true --firmware-binary true \
  --uefi-secure-boot auto --image-name hardik-os-0.5.0 \
