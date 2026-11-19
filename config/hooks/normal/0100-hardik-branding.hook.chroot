@@ -17,7 +17,22 @@ Ubuntu-based • amd64
 EOF
 
 mkdir -p /etc/skel/.config/autostart /etc/skel/Desktop
+mkdir -p /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml
 chmod 0755 /usr/local/bin/hardik-center /usr/local/bin/hardik-security-report
+cat > /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xsettings" version="1.0">
+  <property name="Net" type="empty">
+    <property name="ThemeName" type="string" value="Arc-Dark"/>
+    <property name="IconThemeName" type="string" value="Papirus-Dark"/>
+  </property>
+  <property name="Gtk" type="empty">
+    <property name="CursorThemeName" type="string" value="Adwaita"/>
+    <property name="FontName" type="string" value="Inter 10"/>
+  </property>
+</channel>
+EOF
+
 cat > /etc/skel/.config/autostart/plank.desktop <<'EOF'
 [Desktop Entry]
 Type=Application
@@ -73,5 +88,5 @@ EOF
 # Keep the launcher on the user's desktop as well as in the Applications menu.
 if [ -f /usr/share/applications/hardik-center.desktop ]; then
   cp /usr/share/applications/hardik-center.desktop /etc/skel/Desktop/
-  chmod 0644 /etc/skel/Desktop/hardik-center.desktop
+  chmod 0755 /etc/skel/Desktop/hardik-center.desktop
 fi
