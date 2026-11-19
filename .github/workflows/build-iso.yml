@@ -12,16 +12,34 @@ concurrency:
 jobs:
   build-iso:
     runs-on: ubuntu-24.04
-    container:
-      image: debian:trixie
     timeout-minutes: 360
     steps:
-      - name: Prepare Debian Trixie build environment
+      - name: Checkout exact triggering commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Validate repository scripts and configuration
         shell: bash
         run: |
-          set -euxo pipefail
-          rm -f /etc/apt/sources.list /etc/apt/sources.list.d/debian.sources
-          cat > /etc/apt/sources.list.d/hardik-debian.sources <<'EOF'
+          set -Eeuo pipefail
+          bash scripts/validate-debian-config.sh
+          echo "Host-side source validation passed."
+
+      - name: Build and verify inside a privileged Debian Trixie builder
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          docker run --rm --privileged \
+            --security-opt seccomp=unconfined \
+            --security-opt apparmor=unconfined \
+            -v "${GITHUB_WORKSPACE}:/workspace" \
+            -w /workspace \
+            debian:trixie bash -Eeuo pipefail -c '
+              set -euxo pipefail
+              rm -f /etc/apt/sources.list /etc/apt/sources.list.d/debian.sources
+              cat > /etc/apt/sources.list.d/hardik-debian.sources <<EOF
           Types: deb
           URIs: http://deb.debian.org/debian
           Suites: trixie trixie-updates
@@ -34,50 +52,23 @@ jobs:
           Components: main contrib non-free non-free-firmware
           Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
           EOF
-          apt-get update
-          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends bash ca-certificates git nodejs live-build debootstrap xorriso squashfs-tools grub-pc-bin grub-efi-amd64-bin mtools dosfstools isolinux syslinux-common rsync curl wget file python3 debian-archive-keyring
-      - name: Checkout exact triggering commit
-        shell: bash
-        run: |
-          set -euxo pipefail
-          git clone --no-checkout "https://github.com/$GITHUB_REPOSITORY.git" "$GITHUB_WORKSPACE"
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          git -C "$GITHUB_WORKSPACE" checkout --detach "$GITHUB_SHA"
-          git -C "$GITHUB_WORKSPACE" rev-parse HEAD
-      - name: Validate repository scripts and configuration
-        shell: bash
-        working-directory: ${{ github.workspace }}
-        run: |
-          set -euxo pipefail
-          bash scripts/validate-debian-config.sh
-          dpkg-query -W live-build debootstrap xorriso squashfs-tools
-          grep -E '^(VERSION_ID|VERSION_CODENAME)=' /etc/os-release
-          test "$(dpkg --print-architecture)" = amd64
-      - name: Resolve requested packages from Debian Trixie
-        shell: bash
-        working-directory: ${{ github.workspace }}
-        run: |
-          set -euxo pipefail
-          mapfile -t packages < <(grep -Ev '^[[:space:]]*(#|$)' config/package-lists/hardik.list.chroot)
-          test "${#packages[@]}" -gt 0
-          apt-get install --simulate --no-install-recommends "${packages[@]}" | tee /tmp/hardik-package-plan.txt
-      - name: Build Debian 13 live ISO
-        shell: bash
-        working-directory: ${{ github.workspace }}
-        run: |
-          set -euxo pipefail
-          bash scripts/build-iso.sh
-      - name: Verify ISO boot metadata and checksum
-        if: success()
-        shell: bash
-        working-directory: ${{ github.workspace }}
-        run: |
-          set -euxo pipefail
-          test -s output/hardik-os-0.5.0-amd64.iso
-          file output/hardik-os-0.5.0-amd64.iso
-          xorriso -indev output/hardik-os-0.5.0-amd64.iso -report_el_torito as_mkisofs
-          xorriso -indev output/hardik-os-0.5.0-amd64.iso -find / -name filesystem.squashfs -print
-          sha256sum -c output/SHA256SUMS
+              apt-get update
+              DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+                bash ca-certificates git live-build debootstrap xorriso squashfs-tools \
+                grub-pc-bin grub-efi-amd64-bin mtools dosfstools isolinux syslinux-common \
+                rsync curl wget file python3 debian-archive-keyring
+              bash scripts/validate-debian-config.sh
+              mapfile -t packages < <(grep -Ev "^[[:space:]]*(#|$)" config/package-lists/hardik.list.chroot)
+              test "${#packages[@]}" -gt 0
+              apt-get install --simulate --no-install-recommends "${packages[@]}" | tee /tmp/hardik-package-plan.txt
+              bash scripts/build-iso.sh
+              test -s output/hardik-os-0.5.0-amd64.iso
+              file output/hardik-os-0.5.0-amd64.iso
+              xorriso -indev output/hardik-os-0.5.0-amd64.iso -report_el_torito as_mkisofs
+              xorriso -indev output/hardik-os-0.5.0-amd64.iso -find / -name filesystem.squashfs -print
+              sha256sum -c output/SHA256SUMS
+            '
+
       - name: Upload verified ISO
         if: success()
         uses: actions/upload-artifact@v4
@@ -91,6 +82,7 @@ jobs:
           if-no-files-found: error
           compression-level: 0
           retention-days: 14
+
       - name: Preserve build diagnostics
         if: always()
         uses: actions/upload-artifact@v4
