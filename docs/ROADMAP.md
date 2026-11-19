@@ -1,35 +1,46 @@
-# HARDIK OS implementation roadmap
+# HARDIK OS — Integrated release target
 
-The project is moving from a bare ISO foundation into an integrated desktop. Each feature must be built and tested as a real function, not a visual placeholder.
+The project is being developed toward one integrated release rather than asking the user to install or validate separate phase builds. Engineering still uses internal checkpoints so failures can be isolated; these are not separate user-facing releases.
 
-| Area | Current state | Remaining work |
-|---|---|---|
-| Build pipeline | Ubuntu Noble live-build, explicit Noble security archive, failure-log artifact | Successful build, ISO boot test, automated smoke tests |
-| Desktop | XFCE, Thunar, Plank, Picom, dark theme packages | Custom shell, panel, widgets, notifications and polished settings |
-| HARDIK Center | Launcher and runtime security report | System information, update UI, backup and recovery controls |
-| Security | UFW policy, AppArmor and unattended-upgrades enabled in image | Runtime verification, threat model, hardening and tests for each layer |
-| Encryption | cryptsetup tools included | Installer-driven LUKS full-disk encryption and recovery-key workflow |
-| DEB store | APT/DPKG base | Branded package frontend and safe repository policy |
-| EXE support | Not integrated | Wine/Bottles workflow with sandboxing and compatibility checks |
-| APK support | Not integrated | Waydroid integration, hardware compatibility and licensing review |
-| Keymapper | Not implemented | Waydroid-only input mapping |
-| Browser | Firefox not forced into image; Chrome not included | Browser choice and official Chrome integration |
-| Installer | Not included | Integrate and test a supported Ubuntu installer |
-| Recovery | Not included | Recovery boot, backup validation and restore flow |
+## Target experience
 
-## Security engineering rules
+- Ubuntu 24.04 LTS amd64 foundation with a branded, dark XFCE desktop and a consistent HARDIK visual identity.
+- HARDIK Center for system settings, security status, updates, storage, diagnostics and maintenance.
+- Graphical installer with guided disk selection, user creation, bootloader setup and optional LUKS full-disk encryption.
+- Application center using trusted APT and Flatpak sources, with clear publisher/source information.
+- Windows application compatibility through Wine/Bottles where supported; compatibility is not guaranteed for every EXE or game.
+- Android app support through Waydroid only on supported hardware/kernel configurations; APK support is not promised on every PC.
+- Recovery environment with boot repair and verified backup/restore workflows.
+- Browser and daily-use utilities.
+- Advanced desktop shell elements, control center, notifications, widgets and performance profiles.
+- Security architecture based on measurable controls, threat modelling and automated verification.
 
-1. Never call HARDIK OS unhackable.
-2. A package being installed does not prove its service is active.
-3. Report observed status as active, inactive, unavailable or unknown.
-4. Do not claim root encryption unless the actual root block-device chain is encrypted.
-5. Do not claim malware protection from the presence of a scanner alone.
-6. Define a threat model and automated test for every security control before counting it as one of the proposed 14 layers.
+## Implementation status
 
-## Delivery order
+| Component | Current repository state |
+|---|---|
+| Ubuntu live image | Build pipeline under repair; no verified ISO yet |
+| Desktop | XFCE, Thunar, Plank, Picom and dark theme defaults |
+| HARDIK Center | Zenity launcher with security report, settings, file manager and terminal |
+| Firewall | UFW policy configured in image; runtime activation must be verified |
+| AppArmor / updates | Enablement and unattended-upgrades configuration included; runtime checks required |
+| Malware scanning | ClamAV on-demand scanner package; not real-time protection |
+| Encryption | cryptsetup tools included; root encryption not yet provisioned by an installer |
+| Installer | Not implemented |
+| App center | Not implemented |
+| Wine / Waydroid | Not integrated |
+| Recovery | Not implemented |
+| Custom shell / AI | Not implemented |
 
-1. Make the image build repeatably and preserve diagnostics on failure.
-2. Build the desktop control center and real status probes.
-3. Add installer and recovery only after the live desktop is stable.
-4. Integrate application formats through maintained upstream projects.
-5. Run VM smoke tests and publish checksums for every release.
+## Security rules
+
+1. Never describe the OS as unhackable.
+2. Count a security layer only when it has a defined threat, implementation, test and observable status.
+3. Distinguish installed, configured, active, inactive and unknown states.
+4. Do not claim full-disk encryption unless the installed root device is actually encrypted.
+5. Do not describe an on-demand scanner as real-time antivirus.
+6. Do not silently add third-party repositories or run untrusted EXE/APK files as root.
+
+## Release acceptance
+
+A release is not called complete until the ISO is generated, checksums verify, BIOS and UEFI boot are checked, live desktop smoke tests pass, installer and recovery flows are tested, and security reports match the actual running system. VM testing remains necessary before installing on a physical PC.

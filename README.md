@@ -1,37 +1,37 @@
 # HARDIK OS
 
-Experimental Ubuntu 24.04 (Noble) amd64 live ISO.
+HARDIK OS is an experimental Ubuntu 24.04 LTS (Noble) amd64 desktop operating-system project, targeting one integrated release.
 
 ## Build on GitHub
 
 1. Open [Actions](../../actions/workflows/build-iso.yml).
-2. Select **Build HARDIK OS ISO** and run the workflow, or push a change to a build path.
-3. Download **hardik-os-0.2.0-iso** after a successful run.
+2. Run **Build HARDIK OS ISO**, or push a change to a build path.
+3. After a successful run, download **hardik-os-0.3.0-iso**.
 4. Extract the ZIP to get the ISO.
 
-Failed builds also upload **hardik-os-build-diagnostics** when a build log exists.
+Failed runs upload **hardik-os-build-diagnostics** when logs exist.
 
-## Current development features
+## Current implemented foundation
 
-- Ubuntu 24.04 Noble amd64 live system.
+- Ubuntu 24.04 Noble amd64 live-system build configuration.
 - XFCE desktop, Thunar, Plank dock and Picom compositor.
-- HARDIK OS product identity and desktop launcher.
-- HARDIK Center with a live security-status report.
-- Baseline UFW firewall policy, AppArmor service enablement and unattended security updates.
-- APT/DPKG tools, archive utilities and disk-management tools.
-- Cryptsetup support for manual encryption workflows.
+- HARDIK OS branding and desktop launcher.
+- HARDIK Center with security-status reporting and shortcuts to system tools.
+- UFW baseline policy, AppArmor enablement and unattended security-update configuration.
+- APT/DPKG, archive and disk-management tools.
+- cryptsetup utilities for manual encryption workflows.
 
-## Security honesty
+## Important status
 
-HARDIK OS is experimental. Security Center reports observed configuration; it does not certify the machine as secure. UFW, AppArmor and unattended-upgrades must be verified at runtime. ClamAV is an on-demand scanner, not guaranteed real-time protection. Cryptsetup availability does not mean the live or installed root filesystem is encrypted. No system is unhackable, and the requested 14-layer design is not yet complete or certified.
+The repository does **not** yet contain a verified bootable ISO. The graphical installer, integrated app center, Wine/Bottles, Waydroid, recovery environment, custom shell and AI assistant are not yet implemented. These remain part of the integrated release target, not features to assume are present.
 
-## Not yet implemented
+Security status is reported from the running system and is not a certification. ClamAV is an on-demand scanner. cryptsetup being installed does not mean the root disk is encrypted. No operating system is unhackable.
 
-A graphical installer, custom full desktop shell, integrated DEB/EXE/APK stores, Wine/Bottles integration, Waydroid and keymapper, Chrome integration, recovery environment and a complete tested 14-layer security architecture remain future work. Do not install this experimental image on a primary machine.
+Do not install experimental builds on a primary machine. Validate them in a virtual machine first.
 
 ## Local build
 
-On Ubuntu 24.04 amd64 with the dependencies in the workflow installed:
+On Ubuntu 24.04 amd64 with the dependencies listed in the workflow:
 
 ```bash
 sudo -E bash scripts/build-iso.sh

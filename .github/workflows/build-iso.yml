@@ -43,10 +43,14 @@ jobs:
           sudo apt-get update
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends live-build debootstrap xorriso squashfs-tools grub-pc-bin grub-efi-amd64-bin mtools dosfstools isolinux syslinux-common rsync curl wget ca-certificates
 
-      - name: Validate build inputs
+      - name: Validate source inputs
         run: |
           set -eux
-          for file in scripts/build-iso.sh config/hooks/normal/0100-hardik-branding.hook.chroot config/includes.chroot/usr/local/bin/hardik-center config/includes.chroot/usr/local/bin/hardik-security-report; do bash -n "$file"; done
+          bash -n scripts/build-iso.sh
+          bash -n config/hooks/normal/0100-hardik-branding.hook.chroot
+          bash -n config/includes.chroot/usr/local/bin/hardik-center
+          bash -n config/includes.chroot/usr/local/bin/hardik-security-report
+          awk 'NF && $1 !~ /^[a-z0-9][a-z0-9+.-]*$/ { print "Invalid package-list entry at line " NR ": " $0; bad=1 } END { exit bad }' config/package-lists/hardik.list.chroot
           test -s config/archives/ubuntu-security.list.chroot
           test -s config/archives/ubuntu-security.list.binary
           curl -fsSI --retry 3 --retry-delay 2 https://security.ubuntu.com/ubuntu/dists/noble-security/InRelease
@@ -58,15 +62,15 @@ jobs:
         if: success()
         run: |
           set -eux
-          test -s output/hardik-os-0.2.0-amd64.iso
-          file output/hardik-os-0.2.0-amd64.iso
+          test -s output/hardik-os-0.3.0-amd64.iso
+          file output/hardik-os-0.3.0-amd64.iso
           sha256sum -c output/SHA256SUMS
 
       - name: Upload ISO
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: hardik-os-0.2.0-iso
+          name: hardik-os-0.3.0-iso
           path: |
             output/*.iso
             output/SHA256SUMS
@@ -76,7 +80,7 @@ jobs:
           compression-level: 0
           retention-days: 14
 
-      - name: Preserve build diagnostics
+      - name: Preserve diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -88,7 +92,7 @@ jobs:
           compression-level: 6
           retention-days: 7
 
-      - name: Final runner disk report
+      - name: Final runner resource report
         if: always()
         run: |
           df -h /
