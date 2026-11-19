@@ -1,5 +1,11 @@
+#!/bin/sh
+set -eu
+
+# Noble ships rsvg-convert, while this Ubuntu live-build release invokes
+# the older "rsvg ... input.svg output.png" interface.
+# Keep the compatibility command at the exact path live-build checks.
+cat > /usr/bin/rsvg <<'PY'
 #!/usr/bin/python3
-"""Translate the legacy live-build rsvg syntax to Noble's rsvg-convert CLI."""
 import os
 import sys
 
@@ -7,7 +13,9 @@ args = sys.argv[1:]
 if len(args) < 2:
     os.execv("/usr/bin/rsvg-convert", ["rsvg-convert", *args])
 
-# Old live-build passes: options..., input.svg, output.png
-# Modern librsvg requires: options..., input.svg, -o, output.png
+# Translate: options..., input.svg, output.png
+# Into:      options..., input.svg, -o, output.png
 converted = [*args[:-2], args[-2], "-o", args[-1]]
 os.execv("/usr/bin/rsvg-convert", ["rsvg-convert", *converted])
+PY
+chmod 0755 /usr/bin/rsvg
