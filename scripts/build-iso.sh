@@ -8,8 +8,10 @@ mkdir -p output
 rm -f output/*.iso output/SHA256SUMS output/build-info.txt
 lb clean --purge || true
 lb config \
-  --mode ubuntu \
+  --mode debian \
   --distribution noble \
+  --initramfs casper \
+  --bootstrap-keyring ubuntu-keyring \
   --architectures amd64 \
   --binary-images iso-hybrid \
   --archive-areas "main universe multiverse restricted" \
