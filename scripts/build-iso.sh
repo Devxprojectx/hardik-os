@@ -43,7 +43,6 @@ lb config \
   --mirror-chroot https://archive.ubuntu.com/ubuntu/ \
   --mirror-binary https://archive.ubuntu.com/ubuntu/ \
   --security false \
-  --package-lists "" \
   --bootappend-live "boot=casper quiet splash username=hardik hostname=hardik-os" \
   --apt-recommends false
 
