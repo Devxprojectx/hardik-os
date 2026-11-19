@@ -1,4 +1,5 @@
 casper
+isolinux
 linux-image-generic
 systemd-sysv
 sudo
