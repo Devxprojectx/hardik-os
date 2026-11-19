@@ -37,8 +37,8 @@ fi
 
 root_source="$(findmnt -n -o SOURCE / 2>/dev/null || true)"
 if [[ "$root_source" == /dev/mapper/* ]]; then
-  root_type="$(lsblk -sno TYPE "$root_source" 2>/dev/null | tail -n 1 || true)"
-  if [[ "$root_type" == "crypt" ]]; then
+  root_types="$(lsblk -sno TYPE "$root_source" 2>/dev/null || true)"
+  if printf '%s\n' "$root_types" | grep -qx "crypt"; then
     status "Root disk encryption:" "LUKS/DM-CRYPT DETECTED"
   else
     status "Root disk encryption:" "NOT VERIFIED"
