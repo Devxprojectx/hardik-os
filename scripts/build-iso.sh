@@ -36,7 +36,7 @@ grep -R -q 'LB_DISTRIBUTION="trixie"' config
 grep -R -q 'LB_INITRAMFS="live-boot"' config
 if grep -R -nE 'noble|casper|ubuntu-security|gfxboot-theme-ubuntu' config; then echo "Ubuntu-specific configuration detected."; exit 1; fi
 lb build
-ISO="$(find binary -maxdepth 1 -type f -name '*.iso' -print -quit)"
+ISO="$(find . -maxdepth 1 -type f -name '*.iso' -print -quit)"
 [[ -n "$ISO" ]] || { echo "No ISO produced."; exit 1; }
 cp "$ISO" output/hardik-os-0.5.0-amd64.iso
 {
