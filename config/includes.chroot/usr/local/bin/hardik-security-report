@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -u
+section() { printf '\n=== %s ===\n' "$1"; }
+printf 'HARDIK OS SECURITY CENTER\nVersion 0.5.0 — Debian 13 Trixie\n'
+section "1 / Firmware and Secure Boot"; if command -v mokutil >/dev/null && mokutil --sb-state 2>/dev/null; then :; else echo "Secure Boot status unavailable or not enforced by this boot."; fi
+section "2 / Disk encryption"; lsblk -o NAME,TYPE,FSTYPE,MOUNTPOINT 2>/dev/null | head -30 || true; echo "cryptsetup tools installed; this live system is not proof of encrypted installed storage."
+section "3 / Kernel"; uname -r
+section "4 / AppArmor"; aa-status 2>&1 | head -12 || true
+section "5 / Firewall"; ufw status verbose 2>&1 || true
+section "6 / Updates"; systemctl is-enabled unattended-upgrades 2>/dev/null || true
+section "7 / Malware scanning"; clamscan --version 2>/dev/null || true
+section "8 / Package integrity"; dpkg --audit 2>&1 || true
+section "9 / Application sandboxing"; command -v firejail || true
+section "10 / User permissions"; id
+section "11 / Audit service"; systemctl is-active auditd 2>/dev/null || true
+section "12 / Network"; ip route 2>/dev/null | head -8 || true
+section "13 / Privacy"; echo "Review browser and application permissions in their settings."
+section "14 / Recovery"; echo "Live recovery tools: GParted, GNOME Disks and terminal. Keep separate backups."
+echo "These are 14 protection areas, not a certification or claim of being unhackable."

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=HARDIK Center
+Comment=System tools and security status
+Exec=hardik-center
+Icon=applications-system
+Terminal=false
+Categories=System;Settings;
+StartupNotify=true

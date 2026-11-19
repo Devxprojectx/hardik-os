@@ -80,7 +80,7 @@ Name=HARDIK System Monitor
 Exec=conky --config=/etc/xdg/conky/conky.conf
 OnlyShowIn=XFCE;
 EOF
-# Plank launchers use a small keyfile that points to a desktop entry.
+# Plank launchers are keyfiles pointing at installed desktop entries.
 write_dock_item() {
  name="$1"
  desktop="$2"
@@ -104,7 +104,6 @@ Theme=Gtk+
 ZoomEnabled=true
 ZoomPercent=130
 EOF
-
 if [ -f /etc/default/ufw ]; then
  sed -i 's/^DEFAULT_INPUT_POLICY=.*/DEFAULT_INPUT_POLICY="DROP"/' /etc/default/ufw
  sed -i 's/^DEFAULT_OUTPUT_POLICY=.*/DEFAULT_OUTPUT_POLICY="ACCEPT"/' /etc/default/ufw

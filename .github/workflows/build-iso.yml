@@ -1,0 +1,103 @@
+name: Build HARDIK OS ISO
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["config/**", "scripts/**", ".github/workflows/build-iso.yml", "README.md", "docs/**"]
+permissions:
+  contents: read
+concurrency:
+  group: hardik-os-iso-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  build-iso:
+    runs-on: ubuntu-24.04
+    container:
+      image: debian:trixie
+    timeout-minutes: 360
+    steps:
+      - name: Prepare Debian Trixie build environment
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -f /etc/apt/sources.list /etc/apt/sources.list.d/debian.sources
+          cat > /etc/apt/sources.list.d/hardik-debian.sources <<'EOF'
+          Types: deb
+          URIs: https://deb.debian.org/debian
+          Suites: trixie trixie-updates
+          Components: main contrib non-free non-free-firmware
+          Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+
+          Types: deb
+          URIs: https://security.debian.org/debian-security
+          Suites: trixie-security
+          Components: main contrib non-free non-free-firmware
+          Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+          EOF
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends bash ca-certificates git nodejs live-build debootstrap xorriso squashfs-tools grub-pc-bin grub-efi-amd64-bin mtools dosfstools isolinux syslinux-common rsync curl wget file python3 debian-archive-keyring
+      - name: Checkout exact triggering commit
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone --no-checkout "https://github.com/$GITHUB_REPOSITORY.git" "$GITHUB_WORKSPACE"
+          git -C "$GITHUB_WORKSPACE" checkout --detach "$GITHUB_SHA"
+          git -C "$GITHUB_WORKSPACE" rev-parse HEAD
+      - name: Validate repository scripts and configuration
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euxo pipefail
+          bash scripts/validate-debian-config.sh
+          dpkg-query -W live-build debootstrap xorriso squashfs-tools
+          grep -E '^(VERSION_ID|VERSION_CODENAME)=' /etc/os-release
+          test "$(dpkg --print-architecture)" = amd64
+      - name: Resolve requested packages from Debian Trixie
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euxo pipefail
+          mapfile -t packages < <(grep -Ev '^[[:space:]]*(#|$)' config/package-lists/hardik.list.chroot)
+          test "${#packages[@]}" -gt 0
+          apt-get install --simulate --no-install-recommends "${packages[@]}" | tee /tmp/hardik-package-plan.txt
+      - name: Build Debian 13 live ISO
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euxo pipefail
+          bash scripts/build-iso.sh
+      - name: Verify ISO boot metadata and checksum
+        if: success()
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euxo pipefail
+          test -s output/hardik-os-0.5.0-amd64.iso
+          file output/hardik-os-0.5.0-amd64.iso
+          xorriso -indev output/hardik-os-0.5.0-amd64.iso -report_el_torito as_mkisofs
+          xorriso -indev output/hardik-os-0.5.0-amd64.iso -find / -name filesystem.squashfs -print
+          sha256sum -c output/SHA256SUMS
+      - name: Upload verified ISO
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hardik-os-0.5.0-iso
+          path: |
+            output/*.iso
+            output/SHA256SUMS
+            output/build-info.txt
+            output/build.log
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+      - name: Preserve build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hardik-os-build-diagnostics
+          path: |
+            output/build.log
+            output/build-info.txt
+          if-no-files-found: warn
+          compression-level: 6
+          retention-days: 7

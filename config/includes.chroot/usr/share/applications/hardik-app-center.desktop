@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=HARDIK App Center
+Comment=Install DEB, Flatpak, Windows and Android app support
+Exec=hardik-app-center
+Icon=org.gnome.Software
+Terminal=false
+Categories=System;PackageManager;
