@@ -36,11 +36,11 @@ cryptsetup
 apparmor
 apparmor-utils
 ufw
-auditd
+unattended-upgrades
 clamav
-clamav-daemon
 firejail
 policykit-1
 pkexec
+zenity
 unzip
 zip
