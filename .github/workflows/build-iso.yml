@@ -38,7 +38,6 @@ jobs:
             -w /workspace \
             debian:trixie bash -Eeuo pipefail -c '
               set -euxo pipefail
-              git config --global --add safe.directory /workspace
               rm -f /etc/apt/sources.list /etc/apt/sources.list.d/debian.sources
               cat > /etc/apt/sources.list.d/hardik-debian.sources <<EOF
           Types: deb
@@ -58,6 +57,7 @@ jobs:
                 bash ca-certificates git live-build debootstrap xorriso squashfs-tools \
                 grub-pc-bin grub-efi-amd64-bin mtools dosfstools isolinux syslinux-common \
                 rsync curl wget file python3 debian-archive-keyring
+              git config --global --add safe.directory /workspace
               bash scripts/validate-debian-config.sh
               mapfile -t packages < <(grep -Ev "^[[:space:]]*(#|$)" config/package-lists/hardik.list.chroot)
               test "${#packages[@]}" -gt 0
