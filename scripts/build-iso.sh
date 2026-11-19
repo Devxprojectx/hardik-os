@@ -46,6 +46,9 @@ lb config \
 test -s config/archives/ubuntu-security.list.chroot
 test -s config/archives/ubuntu-security.list.binary
 
+# live-build local hooks must be executable to run inside the target root.
+chmod 0755 config/hooks/normal/*.hook.chroot
+
 if grep -R "noble/updates" config/chroot config/common config/bootstrap 2>/dev/null; then
   echo "Invalid Debian-style security suite found in generated config."
   exit 1
