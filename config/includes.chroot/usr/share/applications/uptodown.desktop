@@ -1,9 +1,0 @@
-[Desktop Entry]
-Version=1.0
-Type=Application
-Name=Uptodown APK Catalog
-Comment=Browse Android apps for use with Waydroid
-Exec=xdg-open https://en.uptodown.com/android
-Icon=applications-internet
-Terminal=false
-Categories=Network;

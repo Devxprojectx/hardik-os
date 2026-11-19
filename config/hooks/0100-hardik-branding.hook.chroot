@@ -80,8 +80,31 @@ Name=HARDIK System Monitor
 Exec=conky --config=/etc/xdg/conky/conky.conf
 OnlyShowIn=XFCE;
 EOF
-if [ -f /usr/share/applications/thunar.desktop ]; then cp /usr/share/applications/thunar.desktop /etc/skel/.config/plank/dock1/launchers/thunar.dockitem; fi
-if [ -f /usr/share/applications/xfce4-terminal.desktop ]; then cp /usr/share/applications/xfce4-terminal.desktop /etc/skel/.config/plank/dock1/launchers/terminal.dockitem; fi
+# Plank launchers use a small keyfile that points to a desktop entry.
+write_dock_item() {
+ name="$1"
+ desktop="$2"
+ cat > "/etc/skel/.config/plank/dock1/launchers/$name.dockitem" <<EOF
+[PlankDockItemPreferences]
+Launcher=file:///usr/share/applications/$desktop
+EOF
+}
+write_dock_item files thunar.desktop
+write_dock_item terminal xfce4-terminal.desktop
+write_dock_item calendar hardik-calendar.desktop
+write_dock_item center hardik-center.desktop
+write_dock_item software org.gnome.Software.desktop
+cat > /etc/skel/.config/plank/dock1/settings <<'EOF'
+[PlankDockPreferences]
+Alignment=3
+IconSize=48
+ItemsAlignment=1
+Position=3
+Theme=Gtk+
+ZoomEnabled=true
+ZoomPercent=130
+EOF
+
 if [ -f /etc/default/ufw ]; then
  sed -i 's/^DEFAULT_INPUT_POLICY=.*/DEFAULT_INPUT_POLICY="DROP"/' /etc/default/ufw
  sed -i 's/^DEFAULT_OUTPUT_POLICY=.*/DEFAULT_OUTPUT_POLICY="ACCEPT"/' /etc/default/ufw
