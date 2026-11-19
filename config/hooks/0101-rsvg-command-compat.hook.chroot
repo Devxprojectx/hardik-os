@@ -1,0 +1,9 @@
+#!/bin/sh
+set -eu
+
+# Noble ships the librsvg CLI as rsvg-convert, while the legacy live-build
+# Syslinux theme invokes it through the historical command name "rsvg".
+# Create the compatibility name in the image chroot before binary bootloader
+# generation. The target is installed by live-build's Syslinux dependencies.
+mkdir -p /usr/local/bin
+ln -sfn /usr/bin/rsvg-convert /usr/local/bin/rsvg
