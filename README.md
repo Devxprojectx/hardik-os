@@ -1,41 +1,34 @@
 # HARDIK OS
 
-HARDIK OS is an experimental Ubuntu 24.04 LTS (Noble) amd64 desktop operating-system project, targeting one integrated release.
+HARDIK OS is an experimental Debian 13 (Trixie) amd64 live-desktop project.
 
-## Build on GitHub
+## Build
+GitHub Actions builds inside a Debian Trixie container, validates the package list against Trixie's repositories, and then creates the ISO.
 
-1. Open [Actions](../../actions/workflows/build-iso.yml).
+1. Open [GitHub Actions](../../actions/workflows/build-iso.yml).
 2. Run **Build HARDIK OS ISO**, or push a change to a build path.
-3. After a successful run, download **hardik-os-0.3.0-iso**.
-4. Extract the ZIP to get the ISO.
+3. Wait for ISO verification to pass.
+4. Download the `hardik-os-0.5.0-iso` artifact.
 
-The workflow validates shell syntax, the Ubuntu package list, the security repository, the ISOLINUX inputs and the embedded legacy gfxboot archive before building. Failed runs upload **hardik-os-build-diagnostics** when logs exist.
+## Desktop
+- Dark night-city wallpaper with cyan highlights.
+- XFCE, Arc-Dark, Papirus-Dark and Inter.
+- Plank dock, Picom compositor, Conky live monitor and GSimpleCal calendar.
+- Thunar and XFCE Terminal.
+- HARDIK Center, App Center and Security Center.
+- Chrome installation hook.
+- Debian APT/DPKG, Flatpak, GNOME Software and Synaptic.
+- Wine/Winetricks and optional Waydroid setup (compatibility varies).
+- UFW, AppArmor, unattended-upgrades, ClamAV, Firejail, auditd and disk utilities.
 
-## Current implemented foundation
+## Status
+This is an experimental live image. A successful ISO build does not prove all hardware, desktop effects, Wi-Fi firmware, application compatibility or installation workflows work on every PC. Test in a virtual machine first.
 
-- Ubuntu 24.04 Noble amd64 live-system build configuration.
-- XFCE desktop, Thunar, Plank dock and Picom compositor.
-- HARDIK OS 0.3.0 branding, desktop launcher and HARDIK Center.
-- Security-status reporting, UFW baseline policy, AppArmor enablement and unattended security-update configuration.
-- APT/DPKG, archive and disk-management tools.
-- cryptsetup utilities for manual encryption workflows.
-
-## Important status
-
-The repository is still an experimental live-system foundation. A successful ISO build does not by itself prove that BIOS/UEFI boot, the live desktop or installation works on every PC.
-
-The graphical installer, integrated app center, Wine/Bottles, Waydroid, recovery environment, custom shell and AI assistant are not yet implemented. They remain part of the integrated release target, not features to assume are present.
-
-Security status is reported from the running system and is not a certification. ClamAV is an on-demand scanner. cryptsetup being installed does not mean the root disk is encrypted. No operating system is unhackable.
-
-Do not install experimental builds on a primary machine. Validate them in a virtual machine first.
+A finished graphical installer, automatic full-disk encryption, recovery wizard and AI assistant are not yet implemented. cryptsetup being installed does not mean a disk is encrypted, ClamAV is an on-demand scanner, and no operating system is unhackable.
 
 ## Local build
-
-On Ubuntu 24.04 amd64 with the dependencies listed in the workflow:
+On Debian 13 amd64 with workflow dependencies installed:
 
 ```bash
-sudo -E bash scripts/build-iso.sh
+sudo bash scripts/build-iso.sh
 ```
-
-Original project files are MIT licensed. Upstream software and trademarks retain their own licenses.

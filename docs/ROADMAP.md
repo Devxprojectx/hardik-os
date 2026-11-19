@@ -1,46 +1,36 @@
-# HARDIK OS — Integrated release target
+# HARDIK OS — Integrated release plan
 
-The project is being developed toward one integrated release rather than asking the user to install or validate separate phase builds. Engineering still uses internal checkpoints so failures can be isolated; these are not separate user-facing releases.
+The user-facing goal is one integrated operating system. Engineering checkpoints are internal validation gates, not separate user releases.
 
-## Target experience
-
-- Ubuntu 24.04 LTS amd64 foundation with a branded, dark XFCE desktop and a consistent HARDIK visual identity.
-- HARDIK Center for system settings, security status, updates, storage, diagnostics and maintenance.
-- Graphical installer with guided disk selection, user creation, bootloader setup and optional LUKS full-disk encryption.
-- Application center using trusted APT and Flatpak sources, with clear publisher/source information.
-- Windows application compatibility through Wine/Bottles where supported; compatibility is not guaranteed for every EXE or game.
-- Android app support through Waydroid only on supported hardware/kernel configurations; APK support is not promised on every PC.
-- Recovery environment with boot repair and verified backup/restore workflows.
-- Browser and daily-use utilities.
-- Advanced desktop shell elements, control center, notifications, widgets and performance profiles.
-- Security architecture based on measurable controls, threat modelling and automated verification.
+## Target desktop
+- Debian 13 Trixie amd64.
+- Dark XFCE desktop, custom night-city wallpaper, Arc-Dark and Papirus-Dark.
+- Plank dock, Picom, Conky live monitor and GSimpleCal calendar.
+- Thunar, XFCE Terminal, Chrome and HARDIK Center.
+- APT/DPKG, Synaptic and Flatpak.
+- Wine/Winetricks; not every Windows app or game is compatible.
+- Optional Waydroid only on supported kernel/hardware.
 
 ## Implementation status
-
-| Component | Current repository state |
+| Area | Status |
 |---|---|
-| Ubuntu live image | Build pipeline under repair; no verified ISO yet |
-| Desktop | XFCE, Thunar, Plank, Picom and dark theme defaults |
-| HARDIK Center | Zenity launcher with security report, settings, file manager and terminal |
-| Firewall | UFW policy configured in image; runtime activation must be verified |
-| AppArmor / updates | Enablement and unattended-upgrades configuration included; runtime checks required |
-| Malware scanning | ClamAV on-demand scanner package; not real-time protection |
-| Encryption | cryptsetup tools included; root encryption not yet provisioned by an installer |
-| Installer | Not implemented |
-| App center | Not implemented |
-| Wine / Waydroid | Not integrated |
-| Recovery | Not implemented |
-| Custom shell / AI | Not implemented |
+| Debian live ISO | Being rebuilt; not yet verified |
+| Desktop appearance | Theme, wallpaper and widgets included; VM testing required |
+| App Center | APT/Flatpak front-end and Synaptic launcher |
+| Chrome | Network download/install hook |
+| Security baseline | UFW, AppArmor, unattended-upgrades, ClamAV, Firejail and auditd |
+| Graphical installer | Not implemented |
+| Automatic full-disk encryption | Not implemented |
+| Recovery wizard | Not implemented |
+| AI assistant | Not implemented |
 
 ## Security rules
-
-1. Never describe the OS as unhackable.
-2. Count a security layer only when it has a defined threat, implementation, test and observable status.
-3. Distinguish installed, configured, active, inactive and unknown states.
-4. Do not claim full-disk encryption unless the installed root device is actually encrypted.
+1. Never describe HARDIK OS as unhackable.
+2. Count a protection layer only when threat, implementation, test and observable status are defined.
+3. Distinguish installed, configured, active, inactive and unknown.
+4. Do not claim full-disk encryption unless the installed root device is encrypted.
 5. Do not describe an on-demand scanner as real-time antivirus.
-6. Do not silently add third-party repositories or run untrusted EXE/APK files as root.
+6. Do not run downloaded EXE/APK files as root.
 
 ## Release acceptance
-
-A release is not called complete until the ISO is generated, checksums verify, BIOS and UEFI boot are checked, live desktop smoke tests pass, installer and recovery flows are tested, and security reports match the actual running system. VM testing remains necessary before installing on a physical PC.
+The ISO must be generated, checksums must verify, BIOS and UEFI boot must be tested, the live desktop must pass smoke tests, and package sources must point to Debian Trixie. Installer and recovery features require separate tests before being advertised.

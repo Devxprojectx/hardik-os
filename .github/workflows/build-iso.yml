@@ -1,90 +1,87 @@
 name: Build HARDIK OS ISO
-
 on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths:
-      - "config/**"
-      - "scripts/**"
-      - ".github/workflows/build-iso.yml"
-      - "README.md"
-      - "docs/**"
-
+    paths: ["config/**", "scripts/**", ".github/workflows/build-iso.yml", "README.md", "docs/**"]
 permissions:
   contents: read
-
 concurrency:
   group: hardik-os-iso-${{ github.ref }}
   cancel-in-progress: false
-
 jobs:
   build-iso:
     runs-on: ubuntu-24.04
+    container:
+      image: debian:trixie
     timeout-minutes: 360
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Show runner resources
-        run: |
-          nproc
-          free -h
-          df -h /
-
-      - name: Reclaim runner disk
-        run: |
-          sudo rm -rf /usr/local/lib/android /opt/hostedtoolcache/CodeQL
-          sudo docker image prune --all --force || true
-          sudo apt-get clean
-          df -h /
-
-      - name: Install build dependencies
-        run: |
-          sudo apt-get update
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends live-build debootstrap xorriso squashfs-tools grub-pc-bin grub-efi-amd64-bin mtools dosfstools isolinux syslinux-common rsync curl wget ca-certificates
-
-      - name: Validate source and Ubuntu package inputs
+      - name: Prepare Debian Trixie build environment
+        shell: bash
         run: |
           set -euxo pipefail
-          bash -n scripts/build-iso.sh
-          bash -n config/hooks/0090-google-chrome.hook.chroot
-          bash -n config/hooks/0100-hardik-branding.hook.chroot
-          bash -n config/hooks/0101-rsvg-command-compat.hook.chroot
-          bash -n config/includes.chroot/usr/local/bin/hardik-center
-          bash -n config/includes.chroot/usr/local/bin/hardik-app-center
-          bash -n config/includes.chroot/usr/local/bin/hardik-waydroid-setup
-          bash -n config/includes.chroot/usr/local/bin/hardik-security-center
-          bash -n config/includes.chroot/usr/local/bin/hardik-security-report
-          awk 'NF && $1 !~ /^[a-z0-9][a-z0-9+.-]*$/ { print "Invalid package-list entry at line " NR ": " $0; bad=1 } END { exit bad }' config/package-lists/hardik.list.chroot
+          rm -f /etc/apt/sources.list /etc/apt/sources.list.d/debian.sources
+          cat > /etc/apt/sources.list.d/hardik-debian.sources <<'EOF'
+          Types: deb
+          URIs: https://deb.debian.org/debian
+          Suites: trixie trixie-updates
+          Components: main contrib non-free non-free-firmware
+          Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+
+          Types: deb
+          URIs: https://security.debian.org/debian-security
+          Suites: trixie-security
+          Components: main contrib non-free non-free-firmware
+          Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+          EOF
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends bash ca-certificates git nodejs live-build debootstrap xorriso squashfs-tools grub-pc-bin grub-efi-amd64-bin mtools dosfstools isolinux syslinux-common rsync curl wget file python3 debian-archive-keyring
+      - name: Checkout exact triggering commit
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone --no-checkout "https://github.com/$GITHUB_REPOSITORY.git" "$GITHUB_WORKSPACE"
+          git -C "$GITHUB_WORKSPACE" checkout --detach "$GITHUB_SHA"
+          git -C "$GITHUB_WORKSPACE" rev-parse HEAD
+      - name: Validate repository scripts and configuration
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euxo pipefail
+          bash scripts/validate-debian-config.sh
+          dpkg-query -W live-build debootstrap xorriso squashfs-tools
+          grep -E '^(VERSION_ID|VERSION_CODENAME)=' /etc/os-release
+          test "$(dpkg --print-architecture)" = amd64
+      - name: Resolve requested packages from Debian Trixie
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euxo pipefail
           mapfile -t packages < <(grep -Ev '^[[:space:]]*(#|$)' config/package-lists/hardik.list.chroot)
           test "${#packages[@]}" -gt 0
-          sudo apt-get install --simulate --no-install-recommends "${packages[@]}" > /tmp/hardik-package-plan.txt
-          cat /tmp/hardik-package-plan.txt
-          test -s config/archives/ubuntu-security.list.chroot
-          test -s config/archives/ubuntu-security.list.binary
-          grep -qx 'isolinux' config/package-lists/hardik.list.chroot
-          test -e /usr/lib/ISOLINUX/isolinux.bin
-          test -e /usr/lib/syslinux/modules/bios/vesamenu.c32
-          curl -fsSI --retry 3 --retry-delay 2 https://security.ubuntu.com/ubuntu/dists/noble-security/InRelease
-
-      - name: Build ISO
-        run: sudo -E bash scripts/build-iso.sh
-
-      - name: Verify ISO structure and checksum
-        if: success()
+          apt-get install --simulate --no-install-recommends "${packages[@]}" | tee /tmp/hardik-package-plan.txt
+      - name: Build Debian 13 live ISO
+        shell: bash
+        working-directory: ${{ github.workspace }}
         run: |
           set -euxo pipefail
-          test -s output/hardik-os-0.4.0-amd64.iso
-          file output/hardik-os-0.4.0-amd64.iso
-          xorriso -indev output/hardik-os-0.4.0-amd64.iso -report_el_torito as_mkisofs
-          xorriso -indev output/hardik-os-0.4.0-amd64.iso -find / -name filesystem.squashfs -print
+          bash scripts/build-iso.sh
+      - name: Verify ISO boot metadata and checksum
+        if: success()
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euxo pipefail
+          test -s output/hardik-os-0.5.0-amd64.iso
+          file output/hardik-os-0.5.0-amd64.iso
+          xorriso -indev output/hardik-os-0.5.0-amd64.iso -report_el_torito as_mkisofs
+          xorriso -indev output/hardik-os-0.5.0-amd64.iso -find / -name filesystem.squashfs -print
           sha256sum -c output/SHA256SUMS
-
-      - name: Upload ISO
+      - name: Upload verified ISO
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: hardik-os-0.4.0-iso
+          name: hardik-os-0.5.0-iso
           path: |
             output/*.iso
             output/SHA256SUMS
@@ -93,8 +90,7 @@ jobs:
           if-no-files-found: error
           compression-level: 0
           retention-days: 14
-
-      - name: Preserve diagnostics
+      - name: Preserve build diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -105,9 +101,3 @@ jobs:
           if-no-files-found: warn
           compression-level: 6
           retention-days: 7
-
-      - name: Final runner resource report
-        if: always()
-        run: |
-          df -h /
-          free -h
