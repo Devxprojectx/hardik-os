@@ -133,10 +133,10 @@ lb build
 ISO="$(find . -maxdepth 1 -type f -name '*.iso' -print -quit)"
 [[ -n "$ISO" ]] || { echo "No ISO produced; inspect output/build.log"; exit 1; }
 
-cp "$ISO" output/hardik-os-0.3.0-amd64.iso
+cp "$ISO" output/hardik-os-0.4.0-amd64.iso
 {
   echo "HARDIK OS integrated development build"
-  echo "Version: 0.3.0"
+  echo "Version: 0.4.0"
   echo "Base: Ubuntu 24.04 LTS (Noble)"
   echo "Architecture: amd64"
   echo "Build UTC: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"

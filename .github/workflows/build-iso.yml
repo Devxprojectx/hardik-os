@@ -74,17 +74,17 @@ jobs:
         if: success()
         run: |
           set -euxo pipefail
-          test -s output/hardik-os-0.3.0-amd64.iso
-          file output/hardik-os-0.3.0-amd64.iso
-          xorriso -indev output/hardik-os-0.3.0-amd64.iso -report_el_torito as_mkisofs
-          xorriso -indev output/hardik-os-0.3.0-amd64.iso -find / -name filesystem.squashfs -print
+          test -s output/hardik-os-0.4.0-amd64.iso
+          file output/hardik-os-0.4.0-amd64.iso
+          xorriso -indev output/hardik-os-0.4.0-amd64.iso -report_el_torito as_mkisofs
+          xorriso -indev output/hardik-os-0.4.0-amd64.iso -find / -name filesystem.squashfs -print
           sha256sum -c output/SHA256SUMS
 
       - name: Upload ISO
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: hardik-os-0.3.0-iso
+          name: hardik-os-0.4.0-iso
           path: |
             output/*.iso
             output/SHA256SUMS
