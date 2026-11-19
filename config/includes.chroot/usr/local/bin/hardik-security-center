@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+report="$(hardik-security-report)"
+zenity --text-info --title="HARDIK Security Center — 14-layer status" \
+  --width=780 --height=620 --filename=<(printf '%s\n' "$report")
