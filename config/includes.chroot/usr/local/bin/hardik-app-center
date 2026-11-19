@@ -28,7 +28,7 @@ while true; do
       xdg-open https://en.uptodown.com/android >/dev/null 2>&1 &
       ;;
     "Install Windows compatibility tools")
-      xfce4-terminal --hold --command="bash -lc 'sudo apt-get update && sudo apt-get install -y wine wine64 winetricks; echo; read -p "Press Enter to close"'" &
+      xfce4-terminal --hold --command="bash -lc 'sudo apt-get update && sudo apt-get install -y wine wine64 winetricks; exec bash'" &
       ;;
     "Set up Android apps (Waydroid)")
       hardik-waydroid-setup
@@ -38,7 +38,7 @@ while true; do
       else zenity --info --title="Key mapper" --text="Install input-remapper from Ubuntu Software first."; fi
       ;;
     "Open package manager (APT)")
-      xfce4-terminal --command="sudo apt install" &
+      pkexec synaptic >/dev/null 2>&1 &
       ;;
   esac
 done
