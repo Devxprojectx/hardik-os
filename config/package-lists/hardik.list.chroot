@@ -36,8 +36,6 @@ breeze-gtk-theme
 kio-extras
 plymouth
 plymouth-themes
-plank
-conky-all
 pavucontrol
 pipewire
 pipewire-audio
@@ -81,7 +79,6 @@ zenity
 flatpak
 qdbus-qt6
 python3
-python3-pyqt6
 librsvg2-bin
 libnotify-bin
 calamares
@@ -101,3 +98,4 @@ nftables
 python3-dbus
 python3-gi
 python3-gbinder
+

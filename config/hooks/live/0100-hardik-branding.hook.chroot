@@ -94,7 +94,7 @@ fi
 cat > /etc/sddm.conf.d/10-hardik-live.conf <<'EOF'
 [Autologin]
 User=hardik
-Session=plasmawayland.desktop
+Session=plasma.desktop
 Relogin=false
 EOF
 cat > /etc/sddm.conf.d/20-hardik-theme.conf <<'EOF'
@@ -161,56 +161,16 @@ EOF
   fi
 fi
 
-cat > /usr/local/bin/hardik-startup <<'EOF'
-#!/bin/bash
-sleep 7
-if command -v qdbus6 >/dev/null 2>&1; then
-  qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript \
-    'panels().forEach(function(panel) { panel.remove(); });' >/dev/null 2>&1 || true
-fi
-pgrep -x plank >/dev/null || plank >/dev/null 2>&1 &
-pgrep -x conky >/dev/null || conky --config=/etc/xdg/conky/conky.conf >/dev/null 2>&1 &
-pgrep -f '/usr/local/bin/hardik-shell' >/dev/null || hardik-shell >/dev/null 2>&1 &
-EOF
-chmod 0755 /usr/local/bin/hardik-startup
-cat > /etc/skel/.config/autostart/hardik-shell.desktop <<'EOF'
-[Desktop Entry]
-Type=Application
-Name=HARDIK Desktop Shell
-Exec=/usr/local/bin/hardik-startup
-X-KDE-autostart-after=panel
-EOF
+# Keep the standard KDE Plasma desktop and its normal panel/launcher.
+# Do not replace Plasma panels or start custom overlays, docks, or widgets.
+rm -f /etc/skel/.config/autostart/hardik-shell.desktop
+rm -f /etc/skel/.config/autostart/conky.desktop
+rm -f /etc/skel/.config/autostart/plank.desktop
+rm -f /usr/share/applications/hardik-center.desktop
+rm -f /usr/share/applications/hardik-store.desktop
+rm -f /usr/share/applications/hardik-security-center.desktop
+rm -f /usr/share/applications/hardik-launcher.desktop
 
-cat > /usr/share/applications/hardik-center.desktop <<'EOF'
-[Desktop Entry]
-Type=Application
-Name=HARDIK Control Center
-Comment=HARDIK OS settings and tools
-Exec=hardik-center
-Icon=hardik-logo
-Categories=Settings;System;
-Terminal=false
-EOF
-cat > /usr/share/applications/hardik-store.desktop <<'EOF'
-[Desktop Entry]
-Type=Application
-Name=HARDIK Store
-Comment=Install Debian, Windows and Android packages
-Exec=hardik-store
-Icon=hardik-logo
-Categories=System;PackageManager;
-Terminal=false
-EOF
-cat > /usr/share/applications/hardik-security-center.desktop <<'EOF'
-[Desktop Entry]
-Type=Application
-Name=HARDIK Security Centre
-Comment=Review actual system protection status
-Exec=hardik-security-center
-Icon=hardik-logo
-Categories=System;Security;
-Terminal=false
-EOF
 cat > /usr/share/applications/hardik-installer.desktop <<'EOF'
 [Desktop Entry]
 Type=Application
@@ -221,15 +181,7 @@ Icon=hardik-logo
 Categories=System;
 Terminal=false
 EOF
-cat > /usr/share/applications/hardik-launcher.desktop <<'EOF'
-[Desktop Entry]
-Type=Application
-Name=HARDIK Application Launcher
-Exec=hardik-shell --launcher
-Icon=hardik-logo
-Categories=System;
-Terminal=false
-EOF
+
 
 cat > /etc/xdg/conky/conky.conf <<'EOF'
 conky.config = {
