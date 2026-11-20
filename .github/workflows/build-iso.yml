@@ -7,7 +7,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: hardik-os-iso-${{ github.ref }
+  group: hardik-os-iso-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   build-iso:
@@ -17,7 +17,7 @@ jobs:
       - name: Checkout exact triggering commit
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }
+          ref: ${{ github.sha }}
           persist-credentials: false
       - name: Validate repository scripts and configuration
         shell: bash
