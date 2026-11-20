@@ -8,13 +8,14 @@ GitHub Actions builds inside a Debian Trixie container, validates the package li
 1. Open [GitHub Actions](../../actions/workflows/build-iso.yml).
 2. Run **Build HARDIK OS ISO**, or push a change to a build path.
 3. Wait for ISO verification to pass.
-4. Download the `hardik-os-0.5.0-iso` artifact.
+4. Download the `hardik-os-0.5.0-iso` artifact (artifact naming will be updated with the next release).
 
-## Desktop
-- Dark night-city wallpaper with cyan highlights.
-- XFCE, Arc-Dark, Papirus-Dark and Inter.
-- Plank dock, Picom compositor, Conky live monitor and GSimpleCal calendar.
-- Thunar and XFCE Terminal.
+## Desktop (0.6.0 redesign)
+- LXQt desktop instead of XFCE, with PCManFM-Qt and QTerminal.
+- SDDM graphical login manager.
+- Plymouth animated boot splash using the spinner theme.
+- Dark Arc GTK theme, Papirus icons, Inter font and HARDIK night-city wallpaper.
+- Plank dock, Picom window effects and Conky live system monitor.
 - HARDIK Center, App Center and Security Center.
 - Chrome installation hook.
 - Debian APT/DPKG, Flatpak, GNOME Software and Synaptic.
@@ -24,7 +25,7 @@ GitHub Actions builds inside a Debian Trixie container, validates the package li
 ## Status
 This is an experimental live image. A successful ISO build does not prove all hardware, desktop effects, Wi-Fi firmware, application compatibility or installation workflows work on every PC. Test in a virtual machine first.
 
-A finished graphical installer, automatic full-disk encryption, recovery wizard and AI assistant are not yet implemented. cryptsetup being installed does not mean a disk is encrypted, ClamAV is an on-demand scanner, and no operating system is unhackable.
+The ISO currently boots a live session; a finished graphical installer, automatic full-disk encryption, recovery wizard and AI assistant are not yet implemented. cryptsetup being installed does not mean a disk is encrypted, ClamAV is an on-demand scanner, and no operating system is unhackable.
 
 ## Local build
 On Debian 13 amd64 with workflow dependencies installed:

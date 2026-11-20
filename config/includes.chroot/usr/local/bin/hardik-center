@@ -5,10 +5,10 @@ while true; do
  case "$choice" in
   "App Center") hardik-app-center ;;
   "Security Center") hardik-security-center ;;
-  "System Settings") xfce4-settings-manager >/dev/null 2>&1 & ;;
-  "File Manager") thunar >/dev/null 2>&1 & ;;
-  "Terminal") xfce4-terminal >/dev/null 2>&1 & ;;
+  "System Settings") lxqt-config >/dev/null 2>&1 & ;;
+  "File Manager") pcmanfm-qt >/dev/null 2>&1 & ;;
+  "Terminal") qterminal >/dev/null 2>&1 & ;;
   "Calendar") gsimplecal >/dev/null 2>&1 & ;;
-  "About HARDIK OS") zenity --info --title="About HARDIK OS" --width=480 --text="HARDIK OS 0.5.0\nDebian 13 Trixie • amd64\n\nDark XFCE desktop, Plank dock, live system monitor, calendar, Chrome, app manager and security tools.\n\nExperimental development build; hardware compatibility and installation require testing." ;;
+  "About HARDIK OS") zenity --info --title="About HARDIK OS" --width=480 --text="HARDIK OS 0.6.0\nDebian 13 Trixie • amd64\n\nLXQt desktop, SDDM login, animated Plymouth boot splash, Plank dock, live system monitor, Chrome, app manager and security tools.\n\nExperimental development build; hardware compatibility and installation require testing." ;;
  esac
 done
