@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-VERSION="0.7.0"
+VERSION="0.8.0"
 cat > /etc/os-release <<EOF
 PRETTY_NAME="HARDIK OS ${VERSION} (Debian 13 Trixie)"
 NAME="HARDIK OS"
@@ -94,7 +94,7 @@ fi
 cat > /etc/sddm.conf.d/10-hardik-live.conf <<'EOF'
 [Autologin]
 User=hardik
-Session=plasma.desktop
+Session=plasmawayland.desktop
 Relogin=false
 EOF
 cat > /etc/sddm.conf.d/20-hardik-theme.conf <<'EOF'
@@ -269,7 +269,7 @@ ${font Inter:size=9}${color2}UP $uptime_short${color}
 ]];
 EOF
 cat > /var/lib/hardik-os/build-info <<EOF
-version=0.7.0
+version=0.8.0
 base=debian-trixie
 desktop=kde-plasma-6-x11
 display-manager=sddm
