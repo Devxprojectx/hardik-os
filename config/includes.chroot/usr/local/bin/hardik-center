@@ -1,14 +1,22 @@
-#!/usr/bin/env bash
-set -Eeuo pipefail
-while true; do
- choice="$(zenity --list --title="HARDIK OS" --text="Your desktop control center" --column="HARDIK" "App Center" "Security Center" "System Settings" "File Manager" "Terminal" "Calendar" "About HARDIK OS" --width=560 --height=420)" || exit 0
- case "$choice" in
-  "App Center") hardik-app-center ;;
-  "Security Center") hardik-security-center ;;
-  "System Settings") lxqt-config >/dev/null 2>&1 & ;;
-  "File Manager") pcmanfm-qt >/dev/null 2>&1 & ;;
-  "Terminal") qterminal >/dev/null 2>&1 & ;;
-  "Calendar") gsimplecal >/dev/null 2>&1 & ;;
-  "About HARDIK OS") zenity --info --title="About HARDIK OS" --width=480 --text="HARDIK OS 0.6.0\nDebian 13 Trixie • amd64\n\nLXQt desktop, SDDM login, animated Plymouth boot splash, Plank dock, live system monitor, Chrome, app manager and security tools.\n\nExperimental development build; hardware compatibility and installation require testing." ;;
- esac
-done
+#!/usr/bin/python3
+import sys
+from PyQt6.QtCore import QProcess
+from PyQt6.QtWidgets import QApplication,QWidget,QLabel,QPushButton,QVBoxLayout,QGridLayout
+STYLE="""
+QWidget{background:#05070d;color:#edf5ff;font-family:Inter,'Noto Sans',sans-serif;}
+QLabel#title{color:#00d9ff;font-size:28px;font-weight:800;}
+QPushButton{background:#0d1724;border:1px solid #203b50;border-radius:12px;padding:16px;text-align:left;}
+QPushButton:hover{border-color:#00d9ff;color:#00d9ff;}
+"""
+class Center(QWidget):
+    def __init__(self):
+        super().__init__(); self.setWindowTitle("HARDIK Control Center"); self.resize(640,480); self.setStyleSheet(STYLE)
+        root=QVBoxLayout(self); title=QLabel("⬡  HARDIK Control Center"); title.setObjectName("title"); root.addWidget(title)
+        grid=QGridLayout()
+        actions=[("HARDIK Store","hardik-store",[]),("Security Centre","hardik-security-center",[]),("System Settings","systemsettings",[]),("File Manager","dolphin",[]),("Terminal","konsole",[]),("Application Launcher","hardik-shell",["--launcher"])]
+        for i,(label,cmd,args) in enumerate(actions):
+            b=QPushButton("›   "+label); b.clicked.connect(lambda checked=False,c=cmd,a=args:QProcess.startDetached(c,a)); grid.addWidget(b,i//2,i%2)
+        root.addLayout(grid)
+def main():
+    app=QApplication(sys.argv); app.setApplicationName("HARDIK Control Center"); w=Center(); w.show(); sys.exit(app.exec())
+if __name__=="__main__":main()

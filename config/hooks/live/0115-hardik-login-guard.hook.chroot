@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+cat > /usr/local/sbin/hardik-login-guard <<'EOF'
+#!/bin/sh
+# live-boot sets boot=live on the kernel command line. Keep auto-login only there.
+if ! grep -qw 'boot=live' /proc/cmdline; then
+  rm -f /etc/sddm.conf.d/10-hardik-live.conf
+fi
+exit 0
+EOF
+chmod 0755 /usr/local/sbin/hardik-login-guard

@@ -1,0 +1,62 @@
+#!/usr/bin/python3
+import sys
+from pathlib import Path
+from PyQt6.QtCore import QProcess
+from PyQt6.QtWidgets import QApplication,QWidget,QLabel,QPushButton,QVBoxLayout,QHBoxLayout,QGridLayout,QFileDialog,QMessageBox,QFrame
+
+STYLE="""
+QWidget{background:#05070d;color:#edf5ff;font-family:Inter,'Noto Sans',sans-serif;}
+QLabel#title{color:#00d9ff;font-size:27px;font-weight:800;}
+QLabel#muted{color:#8da4b9;}
+QFrame#card{background:#0b111c;border:1px solid #1c3448;border-radius:16px;}
+QPushButton{background:#101c2a;border:1px solid #244154;border-radius:10px;padding:10px 14px;}
+QPushButton:hover{border-color:#00d9ff;color:#00d9ff;background:#102433;}
+"""
+
+class Store(QWidget):
+    def __init__(self):
+        super().__init__(); self.setWindowTitle("HARDIK Store"); self.resize(980,680); self.setStyleSheet(STYLE)
+        root=QVBoxLayout(self); top=QHBoxLayout(); title=QLabel("⬡  HARDIK Store"); title.setObjectName("title"); top.addWidget(title); top.addStretch()
+        discover=QPushButton("Open Discover"); discover.clicked.connect(lambda:QProcess.startDetached("plasma-discover")); top.addWidget(discover); root.addLayout(top)
+        subtitle=QLabel("One place for Debian packages, Windows applications and Android apps."); subtitle.setObjectName("muted"); root.addWidget(subtitle)
+        cards=QGridLayout()
+        cards.addWidget(self.card(".DEB  •  Native Linux","Install Debian packages with APT and resolve dependencies safely.","Browse .deb package"),0,0)
+        cards.addWidget(self.card(".EXE / .MSI  •  Windows","Launch compatible Windows installers using Wine. Compatibility varies.","Browse Windows installer"),0,1)
+        cards.addWidget(self.card(".APK  •  Android","Install APK packages inside a configured Waydroid container.","Browse Android APK"),1,0)
+        cards.addWidget(self.card(".FLATPAKREF  •  Flatpak","Install compatible Flatpak references from a file.","Browse Flatpak reference"),1,1)
+        root.addLayout(cards); label=QLabel("Explore applications"); label.setStyleSheet("font-size:19px;font-weight:700;margin-top:12px;"); root.addWidget(label)
+        grid=QGridLayout()
+        for i,(name,pkg) in enumerate([("Code editor","kate"),("PDF reader","okular"),("Image viewer","gwenview"),("Media player","mpv"),("Calculator","kcalc"),("Archive manager","ark")]):
+            b=QPushButton("＋  "+name); b.clicked.connect(lambda checked=False,p=pkg:self.install_package(p)); grid.addWidget(b,i//3,i%3)
+        root.addLayout(grid); root.addStretch()
+        footer=QLabel("APT / DPKG  •  Wine  •  Waydroid  •  Flatpak"); footer.setObjectName("muted"); root.addWidget(footer)
+    def card(self,title,description,button_text):
+        card=QFrame(); card.setObjectName("card"); layout=QVBoxLayout(card); heading=QLabel(title); heading.setStyleSheet("font-size:18px;font-weight:700;color:#00d9ff;"); layout.addWidget(heading)
+        body=QLabel(description); body.setWordWrap(True); body.setObjectName("muted"); layout.addWidget(body)
+        b=QPushButton(button_text); b.clicked.connect(self.install_file); layout.addWidget(b); return card
+    def install_package(self,pkg):
+        if QMessageBox.question(self,"Install application",f"Install {pkg} from configured Debian repositories?")!=QMessageBox.StandardButton.Yes:return
+        QProcess.startDetached("pkexec",["apt-get","install","-y",pkg])
+    def install_file(self):
+        path,_=QFileDialog.getOpenFileName(self,"Choose an application package",str(Path.home()),"Supported packages (*.deb *.exe *.msi *.apk *.flatpakref);;All files (*)")
+        if not path:return
+        suffix=Path(path).suffix.lower()
+        if suffix==".deb":
+            QMessageBox.information(self,"Debian package","APT will install this local package and resolve dependencies.")
+            QProcess.startDetached("pkexec",["apt-get","install","-y",path])
+        elif suffix in (".exe",".msi"):
+            if not Path("/usr/bin/wine").exists():
+                QMessageBox.warning(self,"Wine unavailable","Install Wine from HARDIK OS before opening Windows installers."); return
+            args=[path] if suffix==".exe" else ["msiexec","/i",path]; QProcess.startDetached("wine",args)
+        elif suffix==".apk":
+            if not Path("/usr/bin/waydroid").exists():
+                if QMessageBox.question(self,"Set up Android support","Waydroid is not installed. Set it up now?")==QMessageBox.StandardButton.Yes:
+                    QProcess.startDetached("hardik-waydroid-setup")
+                return
+            QProcess.startDetached("waydroid",["app","install",path])
+        elif suffix==".flatpakref": QProcess.startDetached("flatpak",["install","--user","-y",path])
+        else: QMessageBox.warning(self,"Unsupported file","Choose a .deb, .exe, .msi, .apk or .flatpakref file.")
+
+def main():
+    app=QApplication(sys.argv); app.setApplicationName("HARDIK Store"); w=Store(); w.show(); sys.exit(app.exec())
+if __name__=="__main__":main()

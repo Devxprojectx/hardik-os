@@ -1,15 +1,3 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-command -v zenity >/dev/null || exit 1
-while true; do
- choice="$(zenity --list --title="HARDIK App Center" --text="Debian APT, Flatpak and compatibility tools" --column="Category" "Open Software Center (DEB / Flatpak)" "Open Synaptic Package Manager" "Install Bottles (Windows app manager)" "Install Windows compatibility tools" "Open Android app catalog" "Set up Android apps (Waydroid)" "Controller / key mapper" --width=620 --height=390)" || exit 0
- case "$choice" in
-  "Open Software Center (DEB / Flatpak)") gnome-software >/dev/null 2>&1 & ;;
-  "Open Synaptic Package Manager") pkexec synaptic >/dev/null 2>&1 & ;;
-  "Install Bottles (Windows app manager)") (flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo; flatpak install --user -y flathub com.usebottles.bottles) | zenity --progress --pulsate --auto-close --no-cancel --title="Installing Bottles" --text="Downloading Bottles from Flathub..." ;;
-  "Install Windows compatibility tools") qterminal --execute bash -lc 'sudo apt-get update && sudo apt-get install -y wine wine64 winetricks; exec bash' >/dev/null 2>&1 & ;;
-  "Open Android app catalog") xdg-open https://en.uptodown.com/android >/dev/null 2>&1 & ;;
-  "Set up Android apps (Waydroid)") hardik-waydroid-setup ;;
-  "Controller / key mapper") input-remapper-gtk >/dev/null 2>&1 & ;;
- esac
-done
+exec hardik-store "$@"

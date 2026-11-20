@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+install -d /usr/share/plymouth/themes/hardik
+cp -a /etc/plymouth/themes/hardik/. /usr/share/plymouth/themes/hardik/
+cat > /usr/share/plymouth/themes/hardik/hardik.script <<'EOF'
+Window.SetBackgroundTopColor(0, 0, 0);
+Window.SetBackgroundBottomColor(0, 0, 0);
+logo_image = Image("hardik-logo.png");
+logo_sprite = Sprite(logo_image);
+logo_phase = 0;
+fun refresh_callback () {
+    logo_phase += ((2 * Math.Pi) / 50) * 0.2;
+    opacity = 0.78 + 0.22 * ((Math.Cos(logo_phase) + 1) / 2);
+    logo_sprite.SetX(Window.GetX() + Window.GetWidth() / 2 - logo_image.GetWidth() / 2);
+    logo_sprite.SetY(Window.GetY() + Window.GetHeight() / 2 - logo_image.GetHeight() / 2);
+    logo_sprite.SetOpacity(opacity);
+}
+Plymouth.SetRefreshFunction(refresh_callback);
+EOF
+plymouth-set-default-theme hardik
+update-initramfs -u -k all

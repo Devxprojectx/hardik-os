@@ -1,0 +1,175 @@
+#!/usr/bin/python3
+import configparser
+import re
+import shlex
+import subprocess
+import sys
+from pathlib import Path
+
+from PyQt6.QtCore import Qt, QTimer, QProcess
+from PyQt6.QtGui import QIcon, QKeySequence, QShortcut
+from PyQt6.QtWidgets import QApplication, QWidget, QDialog, QLabel, QPushButton, QLineEdit, QListWidget, QListWidgetItem, QVBoxLayout, QHBoxLayout
+
+STYLE = """
+QWidget { color:#edf5ff; font-family:Inter,'Noto Sans',sans-serif; }
+QWidget#bar { background:rgba(5,7,13,242); border-bottom:1px solid #12384a; }
+QPushButton { background:transparent; border:0; border-radius:9px; padding:7px 11px; color:#dce8f5; }
+QPushButton:hover { background:#122333; color:#00d9ff; }
+QLineEdit { background:#0c1420; border:1px solid #244154; border-radius:13px; padding:12px 16px; color:#fff; font-size:15px; }
+QListWidget { background:transparent; border:0; outline:0; }
+QListWidget::item { padding:9px; border-radius:8px; }
+QListWidget::item:selected { background:#123244; color:#00d9ff; }
+QDialog { background:#05070d; }
+QLabel#muted { color:#8da4b9; }
+QLabel#brand { color:#00d9ff; font-weight:700; letter-spacing:2px; }
+"""
+
+def launch(command):
+    command = re.sub(r"%[fFuUdDnNickvm]", "", command or "").strip()
+    try:
+        parts = shlex.split(command)
+        if parts:
+            QProcess.startDetached(parts[0], parts[1:])
+    except Exception:
+        pass
+
+def output(*args):
+    try:
+        return subprocess.run(args, capture_output=True, text=True, timeout=3).stdout.strip()
+    except Exception:
+        return ""
+
+def application_entries():
+    found = {}
+    roots = [Path("/usr/share/applications"), Path("/usr/local/share/applications"), Path.home()/".local/share/applications"]
+    for root in roots:
+        if not root.exists():
+            continue
+        for path in root.glob("*.desktop"):
+            try:
+                cfg = configparser.RawConfigParser(interpolation=None, strict=False)
+                cfg.read(path, encoding="utf-8")
+                if not cfg.has_section("Desktop Entry"):
+                    continue
+                sec = cfg["Desktop Entry"]
+                if sec.get("NoDisplay","false").lower()=="true" or sec.get("Hidden","false").lower()=="true":
+                    continue
+                name, command = sec.get("Name",path.stem), sec.get("Exec","")
+                if command and name not in found:
+                    found[name]={"name":name,"exec":command,"icon":sec.get("Icon","application-x-executable"),"categories":sec.get("Categories","").lower()}
+            except Exception:
+                pass
+    return sorted(found.values(), key=lambda x:x["name"].casefold())
+
+CATEGORIES=[("All applications",""),("Internet","network;web;"),("Development","development;"),("Multimedia","audio;video;graphics;"),("Games","game;"),("System tools","system;settings;"),("Utilities","utility;accessibility;")]
+
+class Launcher(QDialog):
+    def __init__(self):
+        super().__init__()
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint|Qt.WindowType.WindowStaysOnTopHint)
+        self.setStyleSheet(STYLE)
+        self.entries=application_entries()
+        self.category=""
+        root=QVBoxLayout(self); root.setContentsMargins(65,45,65,45)
+        head=QHBoxLayout(); brand=QLabel("⬡  HARDIK OS"); brand.setObjectName("brand"); head.addWidget(brand); head.addStretch()
+        close=QPushButton("✕"); close.clicked.connect(self.hide); head.addWidget(close); root.addLayout(head)
+        self.search=QLineEdit(); self.search.setPlaceholderText("Search applications…"); self.search.textChanged.connect(self.refresh); root.addWidget(self.search)
+        body=QHBoxLayout()
+        self.categories=QListWidget(); self.categories.setFixedWidth(205)
+        for title,key in CATEGORIES:
+            item=QListWidgetItem(title); item.setData(Qt.ItemDataRole.UserRole,key); self.categories.addItem(item)
+        self.categories.currentRowChanged.connect(self.select_category); body.addWidget(self.categories)
+        self.apps=QListWidget(); self.apps.setViewMode(QListWidget.ViewMode.IconMode); self.apps.setResizeMode(QListWidget.ResizeMode.Adjust); self.apps.setMovement(QListWidget.Movement.Static)
+        self.apps.itemActivated.connect(self.open_selected); self.apps.itemDoubleClicked.connect(self.open_selected); body.addWidget(self.apps,1)
+        root.addLayout(body,1); footer=QLabel("Search • Categories • Keyboard navigation"); footer.setObjectName("muted"); root.addWidget(footer)
+        QShortcut(QKeySequence("Escape"),self,activated=self.hide)
+        self.categories.setCurrentRow(0); self.refresh()
+    def select_category(self,row):
+        if row>=0:
+            self.category=self.categories.item(row).data(Qt.ItemDataRole.UserRole); self.refresh()
+    def refresh(self):
+        query=self.search.text().casefold(); self.apps.clear()
+        for entry in self.entries:
+            if query and query not in entry["name"].casefold(): continue
+            if self.category and self.category not in entry["categories"]: continue
+            item=QListWidgetItem(QIcon.fromTheme(entry["icon"]),entry["name"]); item.setData(Qt.ItemDataRole.UserRole,entry); self.apps.addItem(item)
+    def open_selected(self,item):
+        entry=item.data(Qt.ItemDataRole.UserRole)
+        if entry: launch(entry["exec"]); self.hide()
+
+class QuickPanel(QDialog):
+    def __init__(self,parent):
+        super().__init__(parent)
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint|Qt.WindowType.Tool|Qt.WindowType.WindowStaysOnTopHint)
+        self.setStyleSheet(STYLE+"QDialog{background:#070b13;border:1px solid #16445a;border-radius:18px;}")
+        self.setFixedSize(360,500); root=QVBoxLayout(self); root.setContentsMargins(20,18,20,18)
+        title=QLabel("Quick settings"); title.setStyleSheet("font-size:20px;font-weight:700;"); root.addWidget(title)
+        self.stats=QLabel("System status"); self.stats.setObjectName("muted"); root.addWidget(self.stats)
+        self.wifi=QPushButton("Wi-Fi"); self.wifi.clicked.connect(self.toggle_wifi); root.addWidget(self.wifi)
+        self.bluetooth=QPushButton("Bluetooth"); self.bluetooth.clicked.connect(self.toggle_bluetooth); root.addWidget(self.bluetooth)
+        self.sound=QPushButton("Sound"); self.sound.clicked.connect(self.toggle_sound); root.addWidget(self.sound)
+        for label,cmd,args in [
+            ("Display & brightness","systemsettings",["kcm_kscreen"]),
+            ("Calendar","plasmawindowed",["org.kde.plasma.calendar"]),
+            ("Notification settings","systemsettings",["kcm_notifications"]),
+            ("Full system monitor","plasma-systemmonitor",[])]:
+            b=QPushButton(label+"   ›"); b.clicked.connect(lambda checked=False,c=cmd,a=args:QProcess.startDetached(c,a)); root.addWidget(b)
+        root.addStretch()
+        note=QLabel("Floating alerts are handled by KDE Plasma Notifications."); note.setObjectName("muted"); note.setWordWrap(True); root.addWidget(note)
+        self.timer=QTimer(self); self.timer.timeout.connect(self.refresh); self.timer.start(4000); self.refresh()
+    def refresh(self):
+        wifi=output("nmcli","radio","wifi") or "unknown"
+        bt=output("bluetoothctl","show")
+        powered="on" if "Powered: yes" in bt else "off"
+        volume=output("wpctl","get-volume","@DEFAULT_AUDIO_SINK@")
+        muted="muted" if "MUTED" in volume else "on"
+        mem=output("free","-m").splitlines()
+        ram="unknown"
+        if len(mem)>1:
+            bits=mem[1].split()
+            if len(bits)>2: ram=f"{bits[2]} / {bits[1]} MB"
+        self.wifi.setText("Wi-Fi  •  "+wifi.title())
+        self.bluetooth.setText("Bluetooth  •  "+powered.title())
+        self.sound.setText("Sound  •  "+muted.title())
+        self.stats.setText("RAM used: "+ram+"   •   CPU load: "+str(output("uptime").split("load average:")[-1]).strip())
+    def toggle_wifi(self):
+        state=output("nmcli","radio","wifi").lower()
+        QProcess.startDetached("nmcli",["radio","wifi","off" if state=="enabled" else "on"])
+        QTimer.singleShot(900,self.refresh)
+    def toggle_bluetooth(self):
+        powered="Powered: yes" in output("bluetoothctl","show")
+        QProcess.startDetached("bluetoothctl",["power","off" if powered else "on"])
+        QTimer.singleShot(900,self.refresh)
+    def toggle_sound(self):
+        QProcess.startDetached("wpctl",["set-mute","@DEFAULT_AUDIO_SINK@","toggle"])
+        QTimer.singleShot(500,self.refresh)
+
+class TopBar(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setObjectName("bar"); self.setWindowFlags(Qt.WindowType.FramelessWindowHint|Qt.WindowType.WindowStaysOnTopHint|Qt.WindowType.Tool); self.setStyleSheet(STYLE)
+        screen=QApplication.primaryScreen().geometry(); self.setGeometry(0,0,screen.width(),44)
+        row=QHBoxLayout(self); row.setContentsMargins(18,2,18,2)
+        logo=QPushButton("⬡  HARDIK"); logo.setStyleSheet("color:#00d9ff;font-weight:800;letter-spacing:2px;"); logo.clicked.connect(lambda:QProcess.startDetached("hardik-center")); row.addWidget(logo)
+        apps=QPushButton("▦  Apps"); apps.clicked.connect(self.show_launcher); row.addWidget(apps); row.addStretch()
+        self.clock=QLabel(); self.clock.setStyleSheet("font-weight:600;color:#f1f6ff;"); row.addWidget(self.clock); row.addStretch()
+        network=QPushButton("◉  Network"); network.clicked.connect(lambda:QProcess.startDetached("systemsettings",["kcm_networkmanagement"])); row.addWidget(network)
+        sound=QPushButton("◖  Sound"); sound.clicked.connect(lambda:QProcess.startDetached("pavucontrol")); row.addWidget(sound)
+        quick=QPushButton("☷  Quick"); quick.clicked.connect(self.show_quick); row.addWidget(quick)
+        self.launcher_dialog=Launcher(); self.quick_panel=QuickPanel(self)
+        self.timer=QTimer(self); self.timer.timeout.connect(self.update_clock); self.timer.start(1000); self.update_clock()
+    def update_clock(self):
+        from datetime import datetime
+        self.clock.setText(datetime.now().strftime("%a  %d %b   •   %H:%M"))
+    def show_launcher(self):
+        self.launcher_dialog.showFullScreen(); self.launcher_dialog.search.setFocus()
+    def show_quick(self):
+        p=self.quick_panel; p.move(self.x()+self.width()-p.width()-18,50); p.show(); p.raise_(); p.refresh()
+
+def main():
+    app=QApplication(sys.argv); app.setApplicationName("HARDIK Desktop Shell"); app.setStyle("Fusion")
+    bar=TopBar(); bar.show()
+    if "--launcher" in sys.argv: bar.show_launcher()
+    sys.exit(app.exec())
+
+if __name__=="__main__": main()

@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+# Ensure the live image starts the graphical login manager even in a chroot
+# where systemctl enable cannot contact a running systemd instance.
+if [ -e /lib/systemd/system/sddm.service ]; then
+  ln -sf /lib/systemd/system/sddm.service /etc/systemd/system/display-manager.service
+elif [ -e /usr/lib/systemd/system/sddm.service ]; then
+  ln -sf /usr/lib/systemd/system/sddm.service /etc/systemd/system/display-manager.service
+else
+  echo "HARDIK ERROR: SDDM unit file is missing." >&2
+  exit 1
+fi
+if [ -e /lib/systemd/system/graphical.target ]; then
+  ln -sf /lib/systemd/system/graphical.target /etc/systemd/system/default.target
+fi

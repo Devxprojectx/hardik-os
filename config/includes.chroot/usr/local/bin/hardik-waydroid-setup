@@ -1,23 +1,29 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-
 if [[ $EUID -ne 0 ]]; then
-  exec pkexec "$0" "$@"
+  zenity --question --title="Set up Android apps" --width=540 \
+    --text="HARDIK OS will enable Debian Trixie backports and install Waydroid. It downloads an Android system image and may not work with every GPU. Continue?" || exit 0
+  exec pkexec "$0" --confirmed
 fi
-if ! grep -qE 'binder_linux|binder' /proc/filesystems 2>/dev/null && [[ ! -e /dev/binderfs ]]; then
-  zenity --warning --title="Android compatibility" --width=520 \
-    --text="This kernel does not currently expose Android Binder. Waydroid cannot start until binder support is available. This is a hardware/kernel capability check, not an OS error."
+if command -v modprobe >/dev/null 2>&1; then
+  modprobe binder_linux devices=binder,hwbinder,vndbinder 2>/dev/null || modprobe binder_linux 2>/dev/null || true
 fi
-if ! command -v curl >/dev/null; then
-  zenity --error --text="curl is required."; exit 1
+if ! grep -qw binderfs /proc/filesystems && ! grep -qw binder /proc/filesystems \
+   && [[ ! -e /dev/binder && ! -d /sys/module/binder_linux ]]; then
+  zenity --warning --title="Android compatibility" --width=540 \
+    --text="This kernel does not expose Android Binder support. Waydroid cannot start until a compatible kernel with Binder is available."
+  exit 1
 fi
-if ! zenity --question --title="Install Waydroid" --width=520 \
-  --text="Waydroid downloads a separate Android system image and needs compatible Binder kernel support. Continue with the official Waydroid repository setup?"; then
-  exit 0
-fi
-curl -fsSL https://repo.waydro.id | bash
+cat > /etc/apt/sources.list.d/trixie-backports.sources <<'EOF'
+Types: deb
+URIs: http://deb.debian.org/debian
+Suites: trixie-backports
+Components: main contrib non-free non-free-firmware
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+EOF
 apt-get update
-DEBIAN_FRONTEND=noninteractive apt-get install -y waydroid
+DEBIAN_FRONTEND=noninteractive apt-get install -y -t trixie-backports waydroid
 waydroid init
-zenity --info --title="Waydroid setup" --width=520 \
-  --text="Waydroid packages and Android image setup have been requested. Reboot, then launch Waydroid from the applications menu. It may not work on every kernel or GPU."
+systemctl enable --now waydroid-container.service
+zenity --info --title="Android layer prepared" --width=540 \
+  --text="Waydroid is installed and its Android image is initialized. Log out and back in, then open Waydroid. APK support depends on Binder, graphics and application compatibility."

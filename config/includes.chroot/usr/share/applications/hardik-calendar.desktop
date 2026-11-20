@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Calendar
+Comment=Open the KDE calendar
+Exec=plasmawindowed org.kde.plasma.calendar
+Icon=org.kde.kalendar
+Categories=Office;Calendar;
+Terminal=false

@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-
-cat > /etc/os-release <<'EOF'
-PRETTY_NAME="HARDIK OS 0.6.0 (Debian 13 Trixie)"
+VERSION="0.7.0"
+cat > /etc/os-release <<EOF
+PRETTY_NAME="HARDIK OS ${VERSION} (Debian 13 Trixie)"
 NAME="HARDIK OS"
-VERSION="0.6.0"
-VERSION_ID="0.6.0"
+VERSION="${VERSION}"
+VERSION_ID="${VERSION}"
 ID=hardik
 ID_LIKE=debian
 VERSION_CODENAME=trixie
 DEBIAN_CODENAME=trixie
 EOF
-printf '%s\n' "HARDIK OS 0.6.0 — Debian 13 Trixie • amd64" > /etc/issue
+printf '%s\n' "HARDIK OS ${VERSION} — Debian 13 Trixie • amd64" > /etc/issue
 
-# KDE Plasma 6 desktop defaults.
-install -d /etc/skel/.config/autostart /etc/skel/.config/plasma-workspace/env \
-  /etc/skel/.config/gtk-3.0 /etc/skel/Desktop \
-  /etc/sddm.conf.d /etc/plymouth/themes
+install -d /etc/skel/.config/autostart /etc/skel/.config/gtk-3.0 \
+  /etc/sddm.conf.d /etc/plymouth/themes/hardik \
+  /usr/share/icons/hicolor/scalable/apps /usr/share/backgrounds \
+  /usr/local/sbin /etc/systemd/system/graphical.target.wants /var/lib/hardik-os
 
 cat > /etc/skel/.config/kdeglobals <<'EOF'
 [General]
@@ -26,17 +26,30 @@ Name=HARDIK OS
 LookAndFeelPackage=org.kde.breezedark.desktop
 [Icons]
 Theme=Papirus-Dark
+[WM]
+activeBackground=5,8,16
+activeForeground=245,248,255
+inactiveBackground=8,10,16
+inactiveForeground=180,190,205
 EOF
-
 cat > /etc/skel/.config/kwinrc <<'EOF'
 [Compositing]
 Enabled=true
 Backend=OpenGL
 GLCore=true
+AnimationSpeed=2
+[Plugins]
+blurEnabled=true
+contrastEnabled=true
+fadeEnabled=true
+minimizeanimationEnabled=true
+slideEnabled=true
 [Windows]
 BorderlessMaximizedWindows=true
+[org.kde.kdecoration2]
+ButtonsOnLeft=
+ButtonsOnRight=IAX
 EOF
-
 cat > /etc/skel/.config/gtk-3.0/settings.ini <<'EOF'
 [Settings]
 gtk-theme-name=Breeze-Dark
@@ -45,60 +58,224 @@ gtk-font-name=Inter 10
 gtk-cursor-theme-name=Adwaita
 EOF
 
-# KDE's own compositor handles transparency, shadows and animations; do not run Picom beside KWin.
-cat > /etc/skel/.config/autostart/plank.desktop <<'EOF'
-[Desktop Entry]
-Type=Application
-Name=HARDIK Dock
-Exec=plank
-EOF
-cat > /etc/skel/.config/autostart/conky.desktop <<'EOF'
-[Desktop Entry]
-Type=Application
-Name=HARDIK System Monitor
-Exec=conky --config=/etc/xdg/conky/conky.conf
-EOF
-cat > /usr/local/bin/hardik-set-wallpaper <<'EOF'
-#!/bin/sh
-sleep 3
-if command -v plasma-apply-wallpaperimage >/dev/null 2>&1; then
-  plasma-apply-wallpaperimage /usr/share/backgrounds/hardik-wallpaper.svg || true
+if [ -f /usr/share/backgrounds/hardik-logo.svg ]; then
+  cp /usr/share/backgrounds/hardik-logo.svg /usr/share/icons/hicolor/scalable/apps/hardik-logo.svg
+  rsvg-convert -w 512 -h 512 /usr/share/backgrounds/hardik-logo.svg -o /etc/plymouth/themes/hardik/hardik-logo.png
 fi
+cat > /etc/plymouth/themes/hardik/hardik.plymouth <<'EOF'
+[Plymouth Theme]
+Name=HARDIK OS
+Description=HARDIK shield logo with electric energy ring
+ModuleName=script
+[script]
+ImageDir=/etc/plymouth/themes/hardik
+ScriptFile=/etc/plymouth/themes/hardik/hardik.script
 EOF
-chmod 0755 /usr/local/bin/hardik-set-wallpaper
-cat > /etc/skel/.config/autostart/hardik-wallpaper.desktop <<'EOF'
-[Desktop Entry]
-Type=Application
-Name=HARDIK Wallpaper
-Exec=/usr/local/bin/hardik-set-wallpaper
+cat > /etc/plymouth/themes/hardik/hardik.script <<'EOF'
+Window.SetBackgroundTopColor(0, 0, 0);
+Window.SetBackgroundBottomColor(0, 0, 0);
+logo_image = Image("hardik-logo.png");
+logo_sprite = Sprite(logo_image);
+logo_sprite.SetPosition(Window.GetX() + Window.GetWidth() / 2 - logo_image.GetWidth() / 2,
+                        Window.GetY() + Window.GetHeight() / 2 - logo_image.GetHeight() / 2);
+fun refresh_callback() {
+    t = Plymouth.GetTime();
+    pulse = 0.78 + 0.22 * Math.Sin(t * 2.2);
+    logo_sprite.SetOpacity(pulse);
+}
+Plymouth.SetRefreshFunction(refresh_callback);
 EOF
+if command -v plymouth-set-default-theme >/dev/null 2>&1 && [ -s /etc/plymouth/themes/hardik/hardik-logo.png ]; then
+  plymouth-set-default-theme hardik || true
+  update-initramfs -u -k all || true
+fi
 
-# SDDM starts the Plasma X11 session for broad VM and older-GPU compatibility.
+# Live USB auto-login only. The guard removes this setting on installed systems.
 cat > /etc/sddm.conf.d/10-hardik-live.conf <<'EOF'
 [Autologin]
 User=hardik
 Session=plasma.desktop
 Relogin=false
 EOF
-systemctl enable sddm.service
-systemctl set-default graphical.target
-
-# Enable the animated Plymouth spinner in the initramfs.
-if command -v plymouth-set-default-theme >/dev/null 2>&1; then
-  plymouth-set-default-theme spinner
-  update-initramfs -u -k all
-fi
-
-if [ -f /etc/default/ufw ]; then
-  sed -i 's/^DEFAULT_INPUT_POLICY=.*/DEFAULT_INPUT_POLICY="DROP"/' /etc/default/ufw
-  sed -i 's/^DEFAULT_OUTPUT_POLICY=.*/DEFAULT_OUTPUT_POLICY="ACCEPT"/' /etc/default/ufw
-  sed -i 's/^DEFAULT_FORWARD_POLICY=.*/DEFAULT_FORWARD_POLICY="DROP"/' /etc/default/ufw
-fi
-if [ -f /etc/ufw/ufw.conf ]; then sed -i 's/^ENABLED=.*/ENABLED=yes/' /etc/ufw/ufw.conf; fi
-systemctl enable ufw.service apparmor.service auditd.service unattended-upgrades.service
-cat > /etc/apt/apt.conf.d/20auto-upgrades <<'EOF'
-APT::Periodic::Update-Package-Lists "1";
-APT::Periodic::Unattended-Upgrade "1";
+cat > /etc/sddm.conf.d/20-hardik-theme.conf <<'EOF'
+[Theme]
+Current=breeze
 EOF
-install -d -m 0755 /var/lib/hardik-os
-printf '%s\n' "version=0.6.0" "base=debian-trixie" "desktop=kde-plasma-6" "display-manager=sddm" "boot-splash=plymouth-spinner" "dock=plank" "system-monitor=conky" > /var/lib/hardik-os/build-hooks
+if [ -d /usr/share/sddm/themes/breeze ]; then
+  cat > /usr/share/sddm/themes/breeze/theme.conf.user <<'EOF'
+[General]
+background=/usr/share/backgrounds/hardik-wallpaper.svg
+EOF
+fi
+cat > /usr/local/sbin/hardik-login-guard <<'EOF'
+#!/bin/sh
+if [ ! -d /run/live/medium ]; then
+  rm -f /etc/sddm.conf.d/10-hardik-live.conf
+fi
+exit 0
+EOF
+chmod 0755 /usr/local/sbin/hardik-login-guard
+cat > /etc/systemd/system/hardik-login-guard.service <<'EOF'
+[Unit]
+Description=HARDIK OS live-session autologin guard
+DefaultDependencies=no
+After=local-fs.target
+Before=sddm.service
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/hardik-login-guard
+RemainAfterExit=yes
+[Install]
+WantedBy=graphical.target
+EOF
+ln -sf /etc/systemd/system/hardik-login-guard.service /etc/systemd/system/graphical.target.wants/hardik-login-guard.service
+systemctl enable sddm.service 2>/dev/null || true
+systemctl set-default graphical.target 2>/dev/null || true
+
+if [ -f /etc/calamares/settings.conf ]; then
+  brand="$(awk '/^[[:space:]]*branding:[[:space:]]*/ {print $2; exit}' /etc/calamares/settings.conf)"
+  src=""
+  if [ -n "$brand" ] && [ -d "/usr/share/calamares/branding/$brand" ]; then
+    src="/usr/share/calamares/branding/$brand"
+  elif [ -n "$brand" ] && [ -d "/etc/calamares/branding/$brand" ]; then
+    src="/etc/calamares/branding/$brand"
+  else
+    desc="$(find /usr/share/calamares/branding /etc/calamares/branding -mindepth 2 -maxdepth 2 -name branding.desc -print -quit 2>/dev/null || true)"
+    [ -z "$desc" ] || src="$(dirname "$desc")"
+  fi
+  if [ -n "$src" ] && [ -f "$src/branding.desc" ]; then
+    install -d /etc/calamares/branding/hardik
+    cp -a "$src/." /etc/calamares/branding/hardik/
+    sed -i 's/^branding:.*/branding: hardik/' /etc/calamares/settings.conf
+    sed -i 's/Debian GNU\/Linux/HARDIK OS/g' /etc/calamares/branding/hardik/branding.desc || true
+    cat > /etc/calamares/branding/hardik/stylesheet.qss <<'EOF'
+QWidget { background: #05070d; color: #edf5ff; selection-background-color: #00d9ff; selection-color: #02050a; }
+QMainWindow, QDialog { background: #05070d; }
+QPushButton { background: #101725; color: #f4f8ff; border: 1px solid #183d50; border-radius: 9px; padding: 9px 16px; }
+QPushButton:hover { border: 1px solid #00d9ff; background: #102433; }
+QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox, QTextEdit, QPlainTextEdit { background: #0b111c; color: #f4f8ff; border: 1px solid #203548; border-radius: 7px; padding: 7px; }
+QProgressBar { background: #101725; border: 1px solid #203548; border-radius: 6px; text-align: center; color: #fff; }
+QProgressBar::chunk { background: #00d9ff; border-radius: 5px; }
+QListView, QTreeView, QTableView { background: #080d16; alternate-background-color: #0e1724; border: 1px solid #203548; }
+EOF
+  fi
+fi
+
+cat > /usr/local/bin/hardik-startup <<'EOF'
+#!/bin/bash
+sleep 7
+if command -v qdbus6 >/dev/null 2>&1; then
+  qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript \
+    'panels().forEach(function(panel) { panel.remove(); });' >/dev/null 2>&1 || true
+fi
+pgrep -x plank >/dev/null || plank >/dev/null 2>&1 &
+pgrep -x conky >/dev/null || conky --config=/etc/xdg/conky/conky.conf >/dev/null 2>&1 &
+pgrep -f '/usr/local/bin/hardik-shell' >/dev/null || hardik-shell >/dev/null 2>&1 &
+EOF
+chmod 0755 /usr/local/bin/hardik-startup
+cat > /etc/skel/.config/autostart/hardik-shell.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=HARDIK Desktop Shell
+Exec=/usr/local/bin/hardik-startup
+X-KDE-autostart-after=panel
+EOF
+
+cat > /usr/share/applications/hardik-center.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=HARDIK Control Center
+Comment=HARDIK OS settings and tools
+Exec=hardik-center
+Icon=hardik-logo
+Categories=Settings;System;
+Terminal=false
+EOF
+cat > /usr/share/applications/hardik-store.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=HARDIK Store
+Comment=Install Debian, Windows and Android packages
+Exec=hardik-store
+Icon=hardik-logo
+Categories=System;PackageManager;
+Terminal=false
+EOF
+cat > /usr/share/applications/hardik-security-center.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=HARDIK Security Centre
+Comment=Review actual system protection status
+Exec=hardik-security-center
+Icon=hardik-logo
+Categories=System;Security;
+Terminal=false
+EOF
+cat > /usr/share/applications/hardik-installer.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=Install HARDIK OS
+Comment=Install HARDIK OS to this computer
+Exec=pkexec calamares
+Icon=hardik-logo
+Categories=System;
+Terminal=false
+EOF
+cat > /usr/share/applications/hardik-launcher.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=HARDIK Application Launcher
+Exec=hardik-shell --launcher
+Icon=hardik-logo
+Categories=System;
+Terminal=false
+EOF
+
+cat > /etc/xdg/conky/conky.conf <<'EOF'
+conky.config = {
+  alignment = 'top_left',
+  background = true,
+  double_buffer = true,
+  own_window = true,
+  own_window_type = 'desktop',
+  own_window_transparent = true,
+  own_window_argb_visual = true,
+  own_window_argb_value = 0,
+  draw_shades = false,
+  draw_outline = false,
+  draw_borders = false,
+  use_xft = true,
+  font = 'Inter:size=10',
+  xftalpha = 0.92,
+  update_interval = 2,
+  total_run_times = 0,
+  gap_x = 34,
+  gap_y = 72,
+  minimum_width = 220,
+  maximum_width = 260,
+  default_color = 'DCE8F5',
+  color1 = '00D9FF',
+  color2 = '8FA3B8',
+  no_buffers = true,
+  uppercase = false,
+};
+conky.text = [[
+${font Inter:style=Medium:size=30}${color1}${time %H:%M}${color}
+${font Inter:size=10}${color2}${time %A, %d %B}${color}
+${voffset 14}${font Inter:style=Medium:size=9}${color1}SYSTEM${color}
+${font Inter:size=10}CPU  ${cpu cpu0}%  ${cpubar cpu0 5,110}
+RAM  $memperc%  ${membar 5,110}
+${font Inter:size=9}${color2}UP $uptime_short${color}
+]];
+EOF
+cat > /var/lib/hardik-os/build-info <<EOF
+version=0.7.0
+base=debian-trixie
+desktop=kde-plasma-6-x11
+display-manager=sddm
+installer=calamares
+boot-splash=hardik-h-energy-ring
+dock=plank
+desktop-shell=hardik-pyqt6
+package-formats=deb,exe,apk
+EOF

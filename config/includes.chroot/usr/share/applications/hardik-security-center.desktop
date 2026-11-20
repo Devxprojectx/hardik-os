@@ -1,9 +1,9 @@
 [Desktop Entry]
 Version=1.0
 Type=Application
-Name=HARDIK Security Center
-Comment=View security layers and system protection status
+Name=HARDIK Security Centre
+Comment=Review actual system protection status
 Exec=hardik-security-center
-Icon=security-high
+Icon=hardik-logo
 Terminal=false
 Categories=System;Security;

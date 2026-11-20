@@ -1,5 +1,44 @@
-#!/usr/bin/env bash
-set -Eeuo pipefail
-report="$(hardik-security-report)"
-zenity --text-info --title="HARDIK Security Center — 14-layer status" \
-  --width=780 --height=620 --filename=<(printf '%s\n' "$report")
+#!/usr/bin/python3
+import subprocess
+from pathlib import Path
+from PyQt6.QtCore import QProcess
+from PyQt6.QtWidgets import QApplication,QWidget,QLabel,QPushButton,QVBoxLayout,QGridLayout,QMessageBox,QFileDialog
+
+STYLE="""
+QWidget{background:#05070d;color:#edf5ff;font-family:Inter,'Noto Sans',sans-serif;}
+QLabel#title{color:#00d9ff;font-size:26px;font-weight:800;}
+QLabel#muted{color:#8da4b9;}
+QPushButton{background:#101c2a;border:1px solid #244154;border-radius:10px;padding:11px 14px;}
+QPushButton:hover{border-color:#00d9ff;color:#00d9ff;}
+"""
+def command(*args):
+    try:return subprocess.run(args,capture_output=True,text=True,timeout=8).stdout.strip()
+    except Exception:return "unknown"
+def status(service):return command("systemctl","is-active",service) or "unknown"
+
+class Security(QWidget):
+    def __init__(self):
+        super().__init__(); self.setWindowTitle("HARDIK Security Centre"); self.resize(760,620); self.setStyleSheet(STYLE)
+        root=QVBoxLayout(self); title=QLabel("⬡  HARDIK Security Centre"); title.setObjectName("title"); root.addWidget(title)
+        note=QLabel("Real system status. An active service does not mean the computer is invulnerable."); note.setObjectName("muted"); note.setWordWrap(True); root.addWidget(note)
+        self.grid=QGridLayout(); root.addLayout(self.grid); self.refresh()
+        update=QPushButton("Check for security updates"); update.clicked.connect(lambda:QProcess.startDetached("konsole",["-e","pkexec","apt-get","update"])); root.addWidget(update)
+        firewall=QPushButton("Enable firewall"); firewall.clicked.connect(lambda:QProcess.startDetached("pkexec",["ufw","enable"])); root.addWidget(firewall)
+        scan=QPushButton("Scan a folder with ClamAV"); scan.clicked.connect(self.scan); root.addWidget(scan)
+        reload=QPushButton("Refresh status"); reload.clicked.connect(self.refresh); root.addWidget(reload)
+    def refresh(self):
+        while self.grid.count():
+            item=self.grid.takeAt(0)
+            if item.widget():item.widget().deleteLater()
+        checks=[("Firewall (UFW)",status("ufw")),("AppArmor",status("apparmor")),("Audit service",status("auditd")),("Automatic updates",status("unattended-upgrades")),("ClamAV scanner","Installed" if Path("/usr/bin/clamscan").exists() else "Not installed"),("Disk encryption","Check each disk; cryptsetup alone does not encrypt a disk")]
+        for i,(name,value) in enumerate(checks):
+            color="#00d9ff" if value in ("active","Installed") else "#d5a64b"
+            label=QLabel(f"<b>{name}</b><br><span style='color:{color}'>{value}</span>"); label.setStyleSheet("background:#0b111c;border:1px solid #1c3448;border-radius:12px;padding:15px;"); label.setWordWrap(True); self.grid.addWidget(label,i//2,i%2)
+    def scan(self):
+        folder=QFileDialog.getExistingDirectory(self,"Choose folder to scan")
+        if folder and QMessageBox.question(self,"ClamAV scan","Run an on-demand recursive scan of this folder?")==QMessageBox.StandardButton.Yes:
+            QProcess.startDetached("konsole",["-e","pkexec","clamscan","-r","--infected",folder])
+
+def main():
+    app=QApplication([]); app.setApplicationName("HARDIK Security Centre"); w=Security(); w.show(); app.exec()
+if __name__=="__main__":main()
