@@ -13,60 +13,44 @@ DEBIAN_CODENAME=trixie
 EOF
 printf '%s\n' "HARDIK OS 0.6.0 — Debian 13 Trixie • amd64" > /etc/issue
 
-# LXQt user defaults and desktop wallpaper.
-install -d /etc/skel/.config/autostart /etc/skel/.config/pcmanfm-qt/lxqt \
-  /etc/skel/.config/gtk-3.0 /etc/skel/Desktop /etc/xdg/conky \
+# KDE Plasma 6 desktop defaults.
+install -d /etc/skel/.config/autostart /etc/skel/.config/plasma-workspace/env \
+  /etc/skel/.config/gtk-3.0 /etc/skel/Desktop \
   /etc/sddm.conf.d /etc/plymouth/themes
 
-cat > /etc/skel/.config/pcmanfm-qt/lxqt/desktop-items-0.conf <<'EOF'
-[Desktop]
-Wallpaper=/usr/share/backgrounds/hardik-wallpaper.svg
-WallpaperMode=stretch
-DesktopBg=#081522
-DesktopFg=#e7f8ff
-ShowWmMenu=true
+cat > /etc/skel/.config/kdeglobals <<'EOF'
+[General]
+ColorScheme=BreezeDark
+Name=HARDIK OS
+[KDE]
+LookAndFeelPackage=org.kde.breezedark.desktop
+[Icons]
+Theme=Papirus-Dark
+EOF
+
+cat > /etc/skel/.config/kwinrc <<'EOF'
+[Compositing]
+Enabled=true
+Backend=OpenGL
+GLCore=true
+[Windows]
+BorderlessMaximizedWindows=true
 EOF
 
 cat > /etc/skel/.config/gtk-3.0/settings.ini <<'EOF'
 [Settings]
-gtk-theme-name=Arc-Dark
+gtk-theme-name=Breeze-Dark
 gtk-icon-theme-name=Papirus-Dark
 gtk-font-name=Inter 10
 gtk-cursor-theme-name=Adwaita
 EOF
 
-cat > /etc/gtk-3.0/settings.ini <<'EOF'
-[Settings]
-gtk-theme-name=Arc-Dark
-gtk-icon-theme-name=Papirus-Dark
-gtk-font-name=Inter 10
-gtk-cursor-theme-name=Adwaita
-EOF
-
-cat > /etc/xdg/picom.conf <<'EOF'
-backend = "xrender";
-vsync = true;
-shadow = true;
-shadow-radius = 18;
-shadow-opacity = 0.34;
-fading = true;
-fade-in-step = 0.035;
-fade-out-step = 0.035;
-inactive-opacity = 0.94;
-active-opacity = 0.98;
-EOF
-
+# KDE's own compositor handles transparency, shadows and animations; do not run Picom beside KWin.
 cat > /etc/skel/.config/autostart/plank.desktop <<'EOF'
 [Desktop Entry]
 Type=Application
 Name=HARDIK Dock
 Exec=plank
-EOF
-cat > /etc/skel/.config/autostart/picom.desktop <<'EOF'
-[Desktop Entry]
-Type=Application
-Name=HARDIK Desktop Effects
-Exec=picom --config /etc/xdg/picom.conf
 EOF
 cat > /etc/skel/.config/autostart/conky.desktop <<'EOF'
 [Desktop Entry]
@@ -74,17 +58,32 @@ Type=Application
 Name=HARDIK System Monitor
 Exec=conky --config=/etc/xdg/conky/conky.conf
 EOF
+cat > /usr/local/bin/hardik-set-wallpaper <<'EOF'
+#!/bin/sh
+sleep 3
+if command -v plasma-apply-wallpaperimage >/dev/null 2>&1; then
+  plasma-apply-wallpaperimage /usr/share/backgrounds/hardik-wallpaper.svg || true
+fi
+EOF
+chmod 0755 /usr/local/bin/hardik-set-wallpaper
+cat > /etc/skel/.config/autostart/hardik-wallpaper.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=HARDIK Wallpaper
+Exec=/usr/local/bin/hardik-set-wallpaper
+EOF
 
-# SDDM provides a real graphical login manager; live-config creates the live user.
+# SDDM starts the Plasma X11 session for broad VM and older-GPU compatibility.
 cat > /etc/sddm.conf.d/10-hardik-live.conf <<'EOF'
 [Autologin]
 User=hardik
-Session=lxqt.desktop
+Session=plasma.desktop
 Relogin=false
 EOF
 systemctl enable sddm.service
+systemctl set-default graphical.target
 
-# Animated boot splash. The spinner theme is shipped by plymouth-themes.
+# Enable the animated Plymouth spinner in the initramfs.
 if command -v plymouth-set-default-theme >/dev/null 2>&1; then
   plymouth-set-default-theme spinner
   update-initramfs -u -k all
@@ -102,4 +101,4 @@ APT::Periodic::Update-Package-Lists "1";
 APT::Periodic::Unattended-Upgrade "1";
 EOF
 install -d -m 0755 /var/lib/hardik-os
-printf '%s\n' "version=0.6.0" "base=debian-trixie" "desktop=lxqt" "display-manager=sddm" "boot-splash=plymouth-spinner" > /var/lib/hardik-os/build-hooks
+printf '%s\n' "version=0.6.0" "base=debian-trixie" "desktop=kde-plasma-6" "display-manager=sddm" "boot-splash=plymouth-spinner" "dock=plank" "system-monitor=conky" > /var/lib/hardik-os/build-hooks

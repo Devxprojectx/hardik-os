@@ -8,7 +8,7 @@ for cmd in lb xorriso mksquashfs debootstrap python3; do command -v "$cmd" >/dev
 mkdir -p output
 rm -f output/*.iso output/SHA256SUMS output/build-info.txt output/build.log
 exec > >(tee -a output/build.log) 2>&1
-echo "=== HARDIK OS 0.5.0 / Debian 13 Trixie ==="
+echo "=== HARDIK OS 0.6.0 / Debian 13 Trixie / KDE Plasma 6 ==="
 date -u
 cat /etc/os-release
 dpkg-query -W live-build debootstrap xorriso squashfs-tools
@@ -27,8 +27,8 @@ lb config \
  --mirror-chroot-security http://security.debian.org/debian-security/ \
  --mirror-binary-security https://security.debian.org/debian-security/ \
  --security true --updates true --firmware-chroot true --firmware-binary true \
- --uefi-secure-boot auto --image-name hardik-os-0.5.0 \
- --iso-volume HARDIK_OS_050 --iso-application "HARDIK OS 0.5.0 Debian 13" \
+ --uefi-secure-boot auto --image-name hardik-os-0.6.0 \
+ --iso-volume HARDIK_OS_060 --iso-application "HARDIK OS 0.6.0 Debian 13 KDE Plasma 6" \
  --bootappend-live "boot=live components username=hardik hostname=hardik-os quiet splash" \
  --apt-recommends true --debian-installer none
 grep -R -q 'LB_MODE="debian"' config
@@ -38,10 +38,11 @@ if grep -R -nE 'noble|casper|ubuntu-security|gfxboot-theme-ubuntu' config; then 
 lb build
 ISO="$(find . -maxdepth 1 -type f -name '*.iso' -print -quit)"
 [[ -n "$ISO" ]] || { echo "No ISO produced."; exit 1; }
-cp "$ISO" output/hardik-os-0.5.0-amd64.iso
+cp "$ISO" output/hardik-os-0.6.0-amd64.iso
 {
- echo "HARDIK OS 0.5.0 — Development Build"
+ echo "HARDIK OS 0.6.0 — Development Build"
  echo "Base: Debian 13 Trixie"
+ echo "Desktop: KDE Plasma 6 (X11 session)"
  echo "Architecture: amd64"
  echo "Build UTC: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
  echo "Source commit: $(git rev-parse HEAD)"
