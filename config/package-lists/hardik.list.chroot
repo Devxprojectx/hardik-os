@@ -10,7 +10,6 @@ firmware-iwlwifi
 firmware-realtek
 plasma-desktop
 plasma-workspace
-plasma-workspace-wayland
 kwin-wayland
 kwin-x11
 sddm
