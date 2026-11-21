@@ -5,6 +5,23 @@ sed -i 's/^ID=hardik$/ID=debian/; s/^ID_LIKE=debian$/ID_LIKE=debian/' /etc/os-re
 grep -q '^VARIANT=' /etc/os-release || echo 'VARIANT="HARDIK OS"' >> /etc/os-release
 grep -q '^VARIANT_ID=' /etc/os-release || echo 'VARIANT_ID=hardik' >> /etc/os-release
 
+# Rebrand Calamares itself and its welcome/logo images, not only the desktop shortcut.
+if [ -d /etc/calamares/branding/hardik ]; then
+  sed -i 's/Debian/HARDIK OS/g' /etc/calamares/branding/hardik/branding.desc
+  rsvg-convert -w 512 -h 512 /usr/share/backgrounds/hardik-logo.svg -o /etc/calamares/branding/hardik/debian-logo.png
+  rsvg-convert -w 1280 -h 720 /usr/share/backgrounds/hardik-wallpaper.svg -o /etc/calamares/branding/hardik/welcome.png
+  rsvg-convert -w 1280 -h 720 /usr/share/backgrounds/hardik-wallpaper.svg -o /etc/calamares/branding/hardik/slide1.png
+fi
+install -d /etc/skel/.config
+cat > /etc/skel/.config/mimeapps.list <<'EOF'
+[Default Applications]
+x-scheme-handler/http=firefox-esr.desktop
+x-scheme-handler/https=firefox-esr.desktop
+text/html=firefox-esr.desktop
+application/x-apple-diskimage=hardik-open-package.desktop
+application/x-apple-installer=hardik-open-package.desktop
+EOF
+
 cat > /usr/local/bin/hardik-installer <<'EOF'
 #!/bin/sh
 if [ "$(id -u)" -eq 0 ]; then exec calamares; fi
@@ -107,7 +124,7 @@ TryExec=/usr/local/bin/hardik-open-package
 Icon=system-software-install
 Terminal=false
 NoDisplay=true
-MimeType=application/x-deb;application/x-ms-dos-executable;application/x-msi;application/vnd.android.package-archive;application/x-apple-diskimage;application/x-apple-installer;
+MimeType=application/x-deb;application/vnd.debian.binary-package;application/x-ms-dos-executable;application/x-msi;application/vnd.android.package-archive;application/x-apple-diskimage;application/x-apple-installer;
 EOF
 update-mime-database /usr/share/mime
 update-desktop-database /usr/share/applications
