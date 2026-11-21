@@ -97,6 +97,7 @@ zenity
 flatpak
 qdbus-qt6
 python3
+python3-pyqt6
 librsvg2-bin
 libnotify-bin
 calamares

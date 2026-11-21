@@ -54,7 +54,7 @@ jobs:
               DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
                 bash ca-certificates git live-build debootstrap xorriso squashfs-tools \
                 grub-pc-bin grub-efi-amd64-bin mtools dosfstools isolinux syslinux-common \
-                rsync curl wget file python3 debian-archive-keyring librsvg2-bin unsquashfs-tools qemu-system-x86
+                rsync curl wget file python3 debian-archive-keyring librsvg2-bin qemu-system-x86
               git config --global --add safe.directory /workspace
               bash scripts/validate-debian-config.sh
               mapfile -t packages < <(grep -Ev "^[[:space:]]*(#|$)" config/package-lists/hardik.list.chroot)
