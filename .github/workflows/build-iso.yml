@@ -69,6 +69,11 @@ jobs:
               xorriso -indev output/hardik-os-0.8.0-amd64.iso -report_el_torito as_mkisofs
               xorriso -indev output/hardik-os-0.8.0-amd64.iso -find / -name filesystem.squashfs | tee /tmp/hardik-squashfs-check.txt
               grep -q "filesystem.squashfs" /tmp/hardik-squashfs-check.txt
+              xorriso -indev output/hardik-os-0.8.0-amd64.iso -find / -name vmlinuz | tee /tmp/hardik-kernel-check.txt
+              grep -q "vmlinuz" /tmp/hardik-kernel-check.txt
+              xorriso -indev output/hardik-os-0.8.0-amd64.iso -find / -name initrd.img | tee /tmp/hardik-initrd-check.txt
+              grep -q "initrd.img" /tmp/hardik-initrd-check.txt
+              echo "Verified ISO contains live kernel, initramfs, and root filesystem."
               sha256sum -c output/SHA256SUMS
             '
       - name: Upload verified ISO
