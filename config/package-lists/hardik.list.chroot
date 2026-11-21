@@ -88,6 +88,8 @@ libvirt-daemon-system
 virt-manager
 ovmf
 qemu-utils
+qemu-user-binfmt
+qemu-user
 qemu-system-gui
 qemu-system-x86
 zram-tools

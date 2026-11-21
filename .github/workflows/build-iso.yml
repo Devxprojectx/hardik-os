@@ -85,8 +85,9 @@ jobs:
               unsquashfs -cat /mnt/hardik-iso/live/filesystem.squashfs usr/share/applications/hardik-installer.desktop > /tmp/hardik-installer.desktop
               grep -q "Name=Install HARDIK OS" /tmp/hardik-installer.desktop
               grep -q "Exec=hardik-installer" /tmp/hardik-installer.desktop
-              unsquashfs -ll /mnt/hardik-iso/live/filesystem.squashfs | grep -q "polkit-kde-authentication-agent-1"
-              unsquashfs -ll /mnt/hardik-iso/live/filesystem.squashfs | grep -q "hardik-wallpaper.png"
+              unsquashfs -ll /mnt/hardik-iso/live/filesystem.squashfs > /tmp/hardik-squashfs-files.txt
+              grep -q "polkit-kde-authentication-agent-1" /tmp/hardik-squashfs-files.txt
+              grep -q "hardik-wallpaper.png" /tmp/hardik-squashfs-files.txt
               echo "Verified Calamares configuration, branded launcher, Polkit agent, and wallpaper inside the ISO."
 
               # Headless QEMU smoke test: boot the actual kernel/initrd with the

@@ -14,6 +14,6 @@ bash scripts/validate-debian-config.sh
 lb build
 ISO="$(find . -maxdepth 1 -type f -name '*.iso' -print -quit)";[[ -n "$ISO" ]]||{ echo "No ISO produced";exit 1;}
 cp "$ISO" "output/hardik-os-$VERSION-amd64.iso"
-{ echo "HARDIK OS $VERSION";echo "Base: Debian 13 Trixie";echo "Desktop: Standard KDE Plasma desktop (Wayland/X11 sessions)";echo "Waydroid: required installed system; skipped in live session";echo "Package formats: DEB / EXE via Wine / APK via Waydroid";echo "Build UTC: $(date -u +%FT%TZ)";echo "Source commit: $(git rev-parse HEAD)";echo "Status: experimental; VM and hardware validation required";} > output/build-info.txt
+{ echo "HARDIK OS $VERSION";echo "Base: Debian 13 Trixie";echo "Desktop: Standard KDE Plasma desktop (Wayland/X11 sessions)";echo "Waydroid: required installed system; skipped in live session";echo "Compatibility: DEB; EXE/MSI via Wine32+64; APK via Waydroid; DMG/PKG extraction; optional experimental Darling; QEMU/DOSBox";echo "Build UTC: $(date -u +%FT%TZ)";echo "Source commit: $(git rev-parse HEAD)";echo "Status: experimental; VM and hardware validation required";} > output/build-info.txt
 sha256sum "output/hardik-os-$VERSION-amd64.iso" | tee output/SHA256SUMS
 ls -lh output/

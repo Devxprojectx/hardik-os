@@ -10,7 +10,7 @@ ET.parse("config/includes.chroot/usr/share/backgrounds/hardik-wallpaper.svg");ET
 print("Python and SVG syntax checks passed")
 PY
 awk 'NF && $1 !~ /^[a-z0-9][a-z0-9+.-]*(:[a-z0-9]+)?$/ {print "Invalid package line " NR ": " $0;bad=1} END {exit bad}' config/package-lists/hardik.list.chroot
-for p in live-boot live-config-systemd plasma-desktop plasma-workspace kwin-wayland sddm calamares calamares-settings-debian wine64 waydroid lxc nftables python3-gbinder python3-pyqt6 qemu-system-x86 qemu-utils virt-manager dosbox zram-tools;do grep -qx "$p" config/package-lists/hardik.list.chroot||{ echo "Required package missing: $p";exit 1;};done
+for p in live-boot live-config-systemd plasma-desktop plasma-workspace kwin-wayland sddm calamares calamares-settings-debian wine64 waydroid lxc nftables python3-gbinder python3-pyqt6 qemu-system-x86 qemu-utils qemu-user qemu-user-binfmt virt-manager dosbox zram-tools;do grep -qx "$p" config/package-lists/hardik.list.chroot||{ echo "Required package missing: $p";exit 1;};done
 ! grep -q 'hardik-startup' config/hooks/live/0100-hardik-branding.hook.chroot
 ! grep -q 'Qt.WindowType.Dock' config/includes.chroot/usr/local/bin/hardik-shell
 test -x config/hooks/live/0100-hardik-branding.hook.chroot

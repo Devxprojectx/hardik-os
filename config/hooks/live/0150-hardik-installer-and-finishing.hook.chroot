@@ -135,7 +135,7 @@ cat > /usr/share/applications/hardik-virtual-machines.desktop <<'EOF'
 Type=Application
 Name=Virtual Machines
 Comment=Create and manage QEMU virtual machines
-Exec=virt-manager
+Exec=virt-manager --connect qemu:///session
 TryExec=virt-manager
 Icon=virt-manager
 Terminal=false
