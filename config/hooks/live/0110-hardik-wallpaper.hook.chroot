@@ -1,14 +1,27 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
+rsvg-convert -w 1920 -h 1080 /usr/share/backgrounds/hardik-wallpaper.svg -o /usr/share/backgrounds/hardik-wallpaper.png
 cat > /usr/local/bin/hardik-set-wallpaper <<'EOF'
 #!/bin/sh
-sleep 3
-command -v plasma-apply-wallpaperimage >/dev/null 2>&1 && plasma-apply-wallpaperimage /usr/share/backgrounds/hardik-wallpaper.svg
+sleep 5
+if command -v plasma-apply-wallpaperimage >/dev/null 2>&1 && [ -s /usr/share/backgrounds/hardik-wallpaper.png ]; then
+  plasma-apply-wallpaperimage /usr/share/backgrounds/hardik-wallpaper.png
+fi
 EOF
 chmod 0755 /usr/local/bin/hardik-set-wallpaper
+cat > /etc/xdg/autostart/hardik-wallpaper.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=HARDIK OS Wallpaper
+Comment=Apply the HARDIK OS branded wallpaper
+Exec=/usr/local/bin/hardik-set-wallpaper
+OnlyShowIn=KDE;
+X-KDE-autostart-after=plasma-desktop
+EOF
 cat > /etc/skel/.config/autostart/hardik-wallpaper.desktop <<'EOF'
 [Desktop Entry]
 Type=Application
 Name=HARDIK OS Wallpaper
 Exec=/usr/local/bin/hardik-set-wallpaper
+OnlyShowIn=KDE;
 EOF

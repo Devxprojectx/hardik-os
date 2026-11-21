@@ -81,6 +81,17 @@ firejail
 auditd
 lynis
 polkitd
+dosbox
+virtinst
+libvirt-clients
+libvirt-daemon-system
+virt-manager
+ovmf
+qemu-utils
+qemu-system-gui
+qemu-system-x86
+zram-tools
+polkit-kde-agent-1
 pkexec
 zenity
 flatpak

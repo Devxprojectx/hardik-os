@@ -54,7 +54,7 @@ jobs:
               DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
                 bash ca-certificates git live-build debootstrap xorriso squashfs-tools \
                 grub-pc-bin grub-efi-amd64-bin mtools dosfstools isolinux syslinux-common \
-                rsync curl wget file python3 debian-archive-keyring librsvg2-bin
+                rsync curl wget file python3 debian-archive-keyring librsvg2-bin unsquashfs-tools qemu-system-x86
               git config --global --add safe.directory /workspace
               bash scripts/validate-debian-config.sh
               mapfile -t packages < <(grep -Ev "^[[:space:]]*(#|$)" config/package-lists/hardik.list.chroot)
@@ -64,23 +64,65 @@ jobs:
               apt-get update
               apt-get install --simulate wine32:i386 | tee /tmp/hardik-wine32-plan.txt
               bash scripts/build-iso.sh
-              test -s output/hardik-os-0.8.0-amd64.iso
-              file output/hardik-os-0.8.0-amd64.iso
-              xorriso -indev output/hardik-os-0.8.0-amd64.iso -report_el_torito as_mkisofs
-              xorriso -indev output/hardik-os-0.8.0-amd64.iso -find / -name filesystem.squashfs | tee /tmp/hardik-squashfs-check.txt
+              test -s output/hardik-os-0.8.1-amd64.iso
+              file output/hardik-os-0.8.1-amd64.iso
+              xorriso -indev output/hardik-os-0.8.1-amd64.iso -report_el_torito as_mkisofs
+              xorriso -indev output/hardik-os-0.8.1-amd64.iso -find / -name filesystem.squashfs | tee /tmp/hardik-squashfs-check.txt
               grep -q "filesystem.squashfs" /tmp/hardik-squashfs-check.txt
-              xorriso -indev output/hardik-os-0.8.0-amd64.iso -find / -name vmlinuz | tee /tmp/hardik-kernel-check.txt
+              xorriso -indev output/hardik-os-0.8.1-amd64.iso -find / -name vmlinuz | tee /tmp/hardik-kernel-check.txt
               grep -q "vmlinuz" /tmp/hardik-kernel-check.txt
-              xorriso -indev output/hardik-os-0.8.0-amd64.iso -find / -name initrd.img | tee /tmp/hardik-initrd-check.txt
+              xorriso -indev output/hardik-os-0.8.1-amd64.iso -find / -name initrd.img | tee /tmp/hardik-initrd-check.txt
               grep -q "initrd.img" /tmp/hardik-initrd-check.txt
-              echo "Verified ISO contains live kernel, initramfs, and root filesystem."
+              echo "ISO contains live kernel, initramfs, and root filesystem."
+              mkdir -p /mnt/hardik-iso
+              mount -o loop,ro output/hardik-os-0.8.1-amd64.iso /mnt/hardik-iso
+              trap "umount /mnt/hardik-iso 2>/dev/null || true" EXIT
+              test -s /mnt/hardik-iso/live/filesystem.squashfs
+              unsquashfs -cat /mnt/hardik-iso/live/filesystem.squashfs etc/calamares/settings.conf > /tmp/hardik-calamares-settings.conf
+              grep -q "branding: hardik" /tmp/hardik-calamares-settings.conf
+              unsquashfs -cat /mnt/hardik-iso/live/filesystem.squashfs usr/local/bin/hardik-installer > /tmp/hardik-installer-launcher
+              grep -q "pkexec /usr/bin/calamares" /tmp/hardik-installer-launcher
+              unsquashfs -cat /mnt/hardik-iso/live/filesystem.squashfs usr/share/applications/hardik-installer.desktop > /tmp/hardik-installer.desktop
+              grep -q "Name=Install HARDIK OS" /tmp/hardik-installer.desktop
+              grep -q "Exec=hardik-installer" /tmp/hardik-installer.desktop
+              unsquashfs -ll /mnt/hardik-iso/live/filesystem.squashfs | grep -q "polkit-kde-authentication-agent-1"
+              unsquashfs -ll /mnt/hardik-iso/live/filesystem.squashfs | grep -q "hardik-wallpaper.png"
+              echo "Verified Calamares configuration, branded launcher, Polkit agent, and wallpaper inside the ISO."
+
+              # Headless QEMU smoke test: boot the actual kernel/initrd with the
+              # generated ISO attached as live media and wait for graphical.target.
+              cp /mnt/hardik-iso/live/vmlinuz /tmp/hardik-vmlinuz
+              cp /mnt/hardik-iso/live/initrd.img /tmp/hardik-initrd.img
+              rm -f /tmp/hardik-qemu-boot.log
+              qemu-system-x86_64 -accel tcg,thread=multi -m 3072 -smp 2 \
+                -kernel /tmp/hardik-vmlinuz -initrd /tmp/hardik-initrd.img \
+                -append "boot=live components username=hardik hostname=hardik-os console=ttyS0,115200n8 systemd.log_target=console systemd.log_level=info" \
+                -drive file=/workspace/output/hardik-os-0.8.1-amd64.iso,media=cdrom,readonly=on,if=ide \
+                -display none -serial file:/tmp/hardik-qemu-boot.log -monitor none -no-reboot &
+              qemu_pid=$!
+              boot_ok=0
+              for attempt in $(seq 1 180); do
+                if grep -q "Reached target graphical.target" /tmp/hardik-qemu-boot.log 2>/dev/null; then
+                  boot_ok=1
+                  break
+                fi
+                if ! kill -0 "$qemu_pid" 2>/dev/null; then break; fi
+                sleep 1
+              done
+              kill "$qemu_pid" 2>/dev/null || true
+              wait "$qemu_pid" 2>/dev/null || true
+              cat /tmp/hardik-qemu-boot.log
+              test "$boot_ok" -eq 1 || { echo "QEMU failed to reach graphical.target; inspect boot log above." >&2; exit 1; }
+              echo "Headless QEMU boot smoke test passed: graphical.target reached."
+              umount /mnt/hardik-iso
+              trap - EXIT
               sha256sum -c output/SHA256SUMS
             '
       - name: Upload verified ISO
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: hardik-os-0.8.0-iso
+          name: hardik-os-0.8.1-iso
           path: |
             output/*.iso
             output/SHA256SUMS

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-VERSION="0.8.0"
+VERSION="0.8.1"
 cat > /etc/os-release <<EOF
 PRETTY_NAME="HARDIK OS ${VERSION} (Debian 13 Trixie)"
 NAME="HARDIK OS"
@@ -87,7 +87,6 @@ Plymouth.SetRefreshFunction(refresh_callback);
 EOF
 if command -v plymouth-set-default-theme >/dev/null 2>&1 && [ -s /etc/plymouth/themes/hardik/hardik-logo.png ]; then
   plymouth-set-default-theme hardik || true
-  update-initramfs -u -k all || true
 fi
 
 # Live USB auto-login only. The guard removes this setting on installed systems.
@@ -226,8 +225,8 @@ base=debian-trixie
 desktop=kde-plasma-6-x11
 display-manager=sddm
 installer=calamares
-boot-splash=hardik-h-energy-ring
-dock=plank
-desktop-shell=hardik-pyqt6
-package-formats=deb,exe,apk
+boot-splash=hardik-plymouth
+dock=standard-kde-panel
+desktop-shell=standard-kde-plasma
+package-formats=deb,exe,apk;macos-dmg-pkg-experimental;wine;waydroid;qemu
 EOF

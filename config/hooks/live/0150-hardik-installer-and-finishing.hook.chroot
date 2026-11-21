@@ -1,0 +1,167 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+# Fail the image build if Calamares is missing or its real Debian install
+# configuration is incomplete. Never ship a clickable but empty installer.
+test -x /usr/bin/calamares
+test -f /etc/calamares/settings.conf
+test -f /etc/calamares/modules/bootloader.conf
+test -f /etc/calamares/modules/unpackfs.conf
+test -f /etc/calamares/modules/users.conf
+test -x /usr/lib/x86_64-linux-gnu/libexec/polkit-kde-authentication-agent-1
+test -f /etc/xdg/autostart/polkit-kde-authentication-agent-1.desktop
+
+# Keep the real Debian installation modules and package scripts, but brand
+# the actual Calamares configuration and welcome artwork as HARDIK OS.
+sed -i -E 's/^([[:space:]]*branding:).*/\1 hardik/' /etc/calamares/settings.conf
+if [ ! -d /etc/calamares/branding/hardik ]; then
+  source_desc="$(find /etc/calamares/branding /usr/share/calamares/branding -mindepth 2 -maxdepth 2 -name branding.desc -print -quit 2>/dev/null || true)"
+  test -n "$source_desc"
+  install -d /etc/calamares/branding/hardik
+  cp -a "$(dirname "$source_desc")/." /etc/calamares/branding/hardik/
+fi
+test -f /etc/calamares/branding/hardik/branding.desc
+sed -i 's/Debian GNU\/Linux/HARDIK OS/g; s/Debian/HARDIK OS/g' /etc/calamares/branding/hardik/branding.desc
+rsvg-convert -w 512 -h 512 /usr/share/backgrounds/hardik-logo.svg -o /etc/calamares/branding/hardik/debian-logo.png
+rsvg-convert -w 1280 -h 720 /usr/share/backgrounds/hardik-wallpaper.svg -o /etc/calamares/branding/hardik/welcome.png
+rsvg-convert -w 1280 -h 720 /usr/share/backgrounds/hardik-wallpaper.svg -o /etc/calamares/branding/hardik/slide1.png
+
+cat > /usr/local/bin/hardik-installer <<'EOF'
+#!/bin/sh
+set -u
+logdir="$HOME/.local/share/hardik-os"
+mkdir -p "$logdir"
+log="$logdir/installer-launch.log"
+{
+  echo
+  echo "=== HARDIK OS installer launch: $(date -Is) ==="
+  if ! grep -qw 'boot=live' /proc/cmdline; then
+    echo "Refusing to launch the live installer outside a live session."
+    zenity --warning --title="HARDIK OS Installer" --text="The installer runs from the HARDIK OS live USB/ISO. Boot the live system and choose Install HARDIK OS." 2>/dev/null || true
+    exit 1
+  fi
+  if [ ! -x /usr/bin/calamares ] || [ ! -f /etc/calamares/settings.conf ]; then
+    echo "Calamares binary or settings are missing."
+    zenity --error --title="HARDIK OS Installer" --text="The installer files are incomplete. See $log" 2>/dev/null || true
+    exit 2
+  fi
+  if [ -x /usr/lib/x86_64-linux-gnu/libexec/polkit-kde-authentication-agent-1 ] &&
+     ! pgrep -f '[p]olkit-kde-authentication-agent-1' >/dev/null 2>&1; then
+    /usr/lib/x86_64-linux-gnu/libexec/polkit-kde-authentication-agent-1 >/dev/null 2>&1 &
+    sleep 1
+  fi
+  echo "Launching Calamares with pkexec; debug output follows."
+  pkexec /usr/bin/calamares -d 2>&1
+  status=$?
+  echo "Calamares exit status: $status"
+  if [ "$status" -ne 0 ]; then
+    zenity --error --title="HARDIK OS Installer" --width=520 --text="The installer closed with an error (code $status). Diagnostic log: $log" 2>/dev/null || true
+  fi
+  exit "$status"
+} >>"$log" 2>&1
+EOF
+chmod 0755 /usr/local/bin/hardik-installer
+
+cat > /usr/share/applications/hardik-installer.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Install HARDIK OS
+GenericName=HARDIK OS Installer
+Comment=Install HARDIK OS to your computer
+Exec=hardik-installer
+TryExec=hardik-installer
+Icon=hardik-logo
+Terminal=false
+Categories=Qt;System;
+StartupWMClass=calamares
+StartupNotify=true
+EOF
+install -d /etc/skel/Desktop
+cp /usr/share/applications/hardik-installer.desktop /etc/skel/Desktop/Install-HARDIK-OS.desktop
+chmod 0755 /etc/skel/Desktop/Install-HARDIK-OS.desktop
+
+cat > /usr/local/bin/hardik-installer-ensure-desktop <<'EOF'
+#!/bin/sh
+grep -qw 'boot=live' /proc/cmdline || exit 0
+desktop="$HOME/Desktop"
+mkdir -p "$desktop"
+cp -f /usr/share/applications/hardik-installer.desktop "$desktop/Install-HARDIK-OS.desktop"
+chmod 0755 "$desktop/Install-HARDIK-OS.desktop"
+rm -f "$desktop/install-debian.desktop" "$desktop/calamares-install-debian.desktop"
+command -v kbuildsycoca6 >/dev/null 2>&1 && kbuildsycoca6 --noincremental >/dev/null 2>&1 || true
+EOF
+chmod 0755 /usr/local/bin/hardik-installer-ensure-desktop
+
+cat > /etc/xdg/autostart/hardik-installer-desktop.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=HARDIK OS Installer Shortcut
+Comment=Ensure the HARDIK OS installer is visible on the live desktop
+Exec=/usr/local/bin/hardik-installer-ensure-desktop
+OnlyShowIn=KDE;
+X-KDE-autostart-after=plasma-desktop
+EOF
+if [ -f /etc/xdg/autostart/calamares-desktop-icon.desktop ]; then
+  cat > /etc/xdg/autostart/calamares-desktop-icon.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=HARDIK OS Installer Shortcut
+Exec=/usr/local/bin/hardik-installer-ensure-desktop
+OnlyShowIn=KDE;
+EOF
+fi
+
+# Replace every package-provided Debian/Calamares menu launcher, including
+# the Trixie AppStream desktop ID, so no stale "Install Debian" entry remains.
+for desktop in /usr/share/applications/*.desktop; do
+  [ -f "$desktop" ] || continue
+  if grep -Eq '^(Name=Install Debian|Name=Install System|Exec=install-debian|Exec=.*pkexec.*calamares)' "$desktop"; then
+    sed -i -E 's/^Name=.*/Name=Install HARDIK OS/; s/^GenericName=.*/GenericName=HARDIK OS Installer/; s/^Comment=.*/Comment=Install HARDIK OS to your computer/; s/^Exec=.*/Exec=hardik-installer/; s/^TryExec=.*/TryExec=hardik-installer/; s/^Icon=.*/Icon=hardik-logo/' "$desktop"
+    grep -q '^Exec=hardik-installer$' "$desktop" || echo 'Exec=hardik-installer' >> "$desktop"
+  fi
+done
+cp /usr/share/applications/hardik-installer.desktop /usr/share/applications/calamares-install-debian.desktop
+cp /usr/share/applications/hardik-installer.desktop /usr/share/applications/install-debian.desktop
+
+# Normal KDE Discover is the reliable software center; keep the HARDIK label.
+if [ -f /usr/share/applications/hardik-app-center.desktop ]; then
+  sed -i 's/^Name=.*/Name=HARDIK Software Center/; s|^Exec=.*|Exec=plasma-discover|; s/^Icon=.*/Icon=plasma-discover/' /usr/share/applications/hardik-app-center.desktop
+fi
+
+# Provide a simple launcher for the bundled QEMU/virt-manager tools.
+cat > /usr/share/applications/hardik-virtual-machines.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=Virtual Machines
+Comment=Create and manage QEMU virtual machines
+Exec=virt-manager
+TryExec=virt-manager
+Icon=virt-manager
+Terminal=false
+Categories=System;Emulator;
+EOF
+
+# zram gives modest-memory computers more breathing room without changing
+# the user's normal KDE desktop or forcing heavy emulators to start at login.
+cat > /etc/default/zramswap <<'EOF'
+ALGO=zstd
+PERCENT=50
+PRIORITY=100
+EOF
+
+cat > /var/lib/hardik-os/build-info <<'EOF'
+version=0.8.1
+base=debian-trixie
+desktop=standard-kde-plasma
+installer=calamares-branded-and-validated
+boot-splash=hardik-plymouth
+compatibility=wine32+wine64;waydroid;flatpak;qemu;dosbox
+macos=DMG/PKG inspect-extract;Darling experimental optional
+memory=zram
+EOF
+
+# Build the Plymouth image only after the final theme files are in place.
+plymouth-set-default-theme hardik
+update-initramfs -u -k all
+update-desktop-database /usr/share/applications

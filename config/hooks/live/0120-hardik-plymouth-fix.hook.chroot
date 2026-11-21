@@ -29,4 +29,3 @@ ScriptFile=/usr/share/plymouth/themes/hardik/hardik.script
 EOF
 if [ -f /usr/share/plymouth/plymouthd.defaults ]; then sed -i 's/^Theme=.*/Theme=hardik/' /usr/share/plymouth/plymouthd.defaults; fi
 plymouth-set-default-theme hardik
-update-initramfs -u -k all
