@@ -93,7 +93,7 @@ fi
 cat > /etc/sddm.conf.d/10-hardik-live.conf <<'EOF'
 [Autologin]
 User=hardik
-Session=plasma.desktop
+Session=plasmawayland.desktop
 Relogin=false
 EOF
 cat > /etc/sddm.conf.d/20-hardik-theme.conf <<'EOF'
