@@ -77,7 +77,7 @@ case "$ext" in
   dmg)
     if command -v darling >/dev/null 2>&1; then exec darling shell hdiutil attach "/Volumes/SystemRoot$file"; fi
     mkdir -p "$HOME/Applications/macOS-Extracted"
-    7zz x "$file" -o"$HOME/Applications/macOS-Extracted"
+    7z x "$file" -o"$HOME/Applications/macOS-Extracted"
     zenity --info --title="HARDIK OS • macOS disk image" --text="The DMG was extracted for inspection. Running macOS apps requires experimental Darling; not all apps work." 2>/dev/null || true
     ;;
   pkg)
