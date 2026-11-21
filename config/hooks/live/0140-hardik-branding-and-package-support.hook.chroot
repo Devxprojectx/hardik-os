@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+# Keep a correct Linux/Debian platform identity for browser and app detection.
+sed -i 's/^ID=hardik$/ID=debian/; s/^ID_LIKE=debian$/ID_LIKE=debian/' /etc/os-release
+grep -q '^VARIANT=' /etc/os-release || echo 'VARIANT="HARDIK OS"' >> /etc/os-release
+grep -q '^VARIANT_ID=' /etc/os-release || echo 'VARIANT_ID=hardik' >> /etc/os-release
+
+cat > /usr/local/bin/hardik-installer <<'EOF'
+#!/bin/sh
+if [ "$(id -u)" -eq 0 ]; then exec calamares; fi
+if command -v pkexec >/dev/null 2>&1; then exec pkexec calamares; fi
+exec sudo -E calamares
+EOF
+chmod 0755 /usr/local/bin/hardik-installer
+
+for desktop in /usr/share/applications/install-debian.desktop /usr/share/applications/calamares-install-debian.desktop; do
+cat > "$desktop" <<'EOF'
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Install HARDIK OS
+GenericName=HARDIK OS Installer
+Comment=Install HARDIK OS to this computer
+Exec=hardik-installer
+TryExec=hardik-installer
+Icon=hardik-logo
+Terminal=false
+Categories=System;Qt;
+StartupWMClass=calamares
+StartupNotify=true
+EOF
+done
+cat > /usr/share/applications/hardik-installer.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=Install HARDIK OS
+Comment=Install HARDIK OS to this computer
+Exec=hardik-installer
+TryExec=hardik-installer
+Icon=hardik-logo
+Terminal=false
+Categories=System;
+StartupWMClass=calamares
+EOF
+install -d /etc/skel/Desktop
+cp /usr/share/applications/hardik-installer.desktop /etc/skel/Desktop/Install-HARDIK-OS.desktop
+chmod 0755 /etc/skel/Desktop/Install-HARDIK-OS.desktop
+if [ -f /etc/xdg/autostart/calamares-desktop-icon.desktop ]; then sed -i '/X-GNOME-Autostart-Phase/d' /etc/xdg/autostart/calamares-desktop-icon.desktop; fi
+
+cat > /usr/local/bin/hardik-open-package <<'EOF'
+#!/bin/sh
+file="$1"
+[ -n "$file" ] && [ -f "$file" ] || exit 2
+ext="$(basename "$file" | awk -F. '{print tolower($NF)}')"
+case "$ext" in
+  deb) exec pkexec apt-get install -y "$file" ;;
+  exe) exec wine "$file" ;;
+  msi) exec wine msiexec /i "$file" ;;
+  apk) exec waydroid app install "$file" ;;
+  dmg)
+    if command -v darling >/dev/null 2>&1; then exec darling shell hdiutil attach "/Volumes/SystemRoot$file"; fi
+    mkdir -p "$HOME/Applications/macOS-Extracted"
+    7zz x "$file" -o"$HOME/Applications/macOS-Extracted"
+    zenity --info --title="HARDIK OS • macOS disk image" --text="The DMG was extracted for inspection. Running macOS apps requires experimental Darling; not all apps work." 2>/dev/null || true
+    ;;
+  pkg)
+    if command -v darling >/dev/null 2>&1; then exec darling shell installer -pkg "/Volumes/SystemRoot$file" -target /; fi
+    zenity --warning --title="HARDIK OS • macOS package" --text="A macOS PKG is not a Linux package. Running it requires experimental Darling; compatibility is limited." 2>/dev/null || true
+    exit 1
+    ;;
+  *) zenity --error --text="Unsupported package type: .$ext" 2>/dev/null || true; exit 1 ;;
+esac
+EOF
+chmod 0755 /usr/local/bin/hardik-open-package
+
+cat > /usr/local/bin/hardik-macos-support <<'EOF'
+#!/bin/sh
+if command -v darling >/dev/null 2>&1; then exec konsole -e darling shell; fi
+zenity --info --title="HARDIK OS • macOS compatibility" --width=500 --text="DMG files can be extracted and PKG files can be inspected. Running macOS apps requires Darling, an experimental compatibility layer with limited GUI/app support. It is not a full macOS emulator and is not bundled in this Debian image. See https://darlinghq.org/ for supported installation options." 2>/dev/null || true
+EOF
+chmod 0755 /usr/local/bin/hardik-macos-support
+cat > /usr/share/applications/hardik-macos-support.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=macOS Compatibility (Experimental)
+Comment=Open Darling or review macOS app compatibility
+Exec=hardik-macos-support
+Icon=system-run
+Terminal=false
+Categories=System;Emulator;
+EOF
+
+cat > /usr/share/mime/packages/hardik-macos.xml <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-apple-diskimage"><comment>Apple Disk Image</comment><glob pattern="*.dmg"/></mime-type>
+  <mime-type type="application/x-apple-installer"><comment>Apple Installer Package</comment><glob pattern="*.pkg"/></mime-type>
+</mime-info>
+EOF
+cat > /usr/share/applications/hardik-open-package.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=HARDIK Package Installer
+Comment=Open supported Linux, Windows, Android, and macOS package files
+Exec=/usr/local/bin/hardik-open-package %f
+TryExec=/usr/local/bin/hardik-open-package
+Icon=system-software-install
+Terminal=false
+NoDisplay=true
+MimeType=application/x-deb;application/x-ms-dos-executable;application/x-msi;application/vnd.android.package-archive;application/x-apple-diskimage;application/x-apple-installer;
+EOF
+update-mime-database /usr/share/mime
+update-desktop-database /usr/share/applications

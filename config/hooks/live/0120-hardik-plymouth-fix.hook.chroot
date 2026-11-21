@@ -2,6 +2,7 @@
 set -Eeuo pipefail
 install -d /usr/share/plymouth/themes/hardik
 cp -a /etc/plymouth/themes/hardik/. /usr/share/plymouth/themes/hardik/
+if [ ! -s /usr/share/plymouth/themes/hardik/hardik-logo.png ]; then rsvg-convert -w 512 -h 512 /usr/share/backgrounds/hardik-logo.svg -o /usr/share/plymouth/themes/hardik/hardik-logo.png; fi
 cat > /usr/share/plymouth/themes/hardik/hardik.script <<'EOF'
 Window.SetBackgroundTopColor(0, 0, 0);
 Window.SetBackgroundBottomColor(0, 0, 0);
@@ -9,13 +10,23 @@ logo_image = Image("hardik-logo.png");
 logo_sprite = Sprite(logo_image);
 logo_phase = 0;
 fun refresh_callback () {
-    logo_phase += ((2 * Math.Pi) / 50) * 0.2;
-    opacity = 0.78 + 0.22 * ((Math.Cos(logo_phase) + 1) / 2);
+    logo_phase += 0.045;
+    opacity = 0.72 + 0.28 * ((Math.Cos(logo_phase) + 1) / 2);
     logo_sprite.SetX(Window.GetX() + Window.GetWidth() / 2 - logo_image.GetWidth() / 2);
     logo_sprite.SetY(Window.GetY() + Window.GetHeight() / 2 - logo_image.GetHeight() / 2);
     logo_sprite.SetOpacity(opacity);
 }
 Plymouth.SetRefreshFunction(refresh_callback);
 EOF
+cat > /usr/share/plymouth/themes/hardik/hardik.plymouth <<'EOF'
+[Plymouth Theme]
+Name=HARDIK OS
+Description=HARDIK OS electric shield boot splash
+ModuleName=script
+[script]
+ImageDir=/usr/share/plymouth/themes/hardik
+ScriptFile=/usr/share/plymouth/themes/hardik/hardik.script
+EOF
+if [ -f /usr/share/plymouth/plymouthd.defaults ]; then sed -i 's/^Theme=.*/Theme=hardik/' /usr/share/plymouth/plymouthd.defaults; fi
 plymouth-set-default-theme hardik
 update-initramfs -u -k all

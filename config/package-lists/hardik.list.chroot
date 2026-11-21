@@ -47,6 +47,13 @@ fonts-noto-color-emoji
 papirus-icon-theme
 adwaita-icon-theme
 curl
+udisks2
+firefox-esr
+xdg-utils
+shared-mime-info
+desktop-file-utils
+dmg2img
+7zip
 ca-certificates
 wget
 git
