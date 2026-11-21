@@ -8,6 +8,8 @@ test -f /etc/calamares/settings.conf
 test -f /etc/calamares/modules/bootloader.conf
 test -f /etc/calamares/modules/unpackfs.conf
 test -f /etc/calamares/modules/users.conf
+test -f /usr/share/wayland-sessions/plasma.desktop
+test -f /usr/share/xsessions/plasmax11.desktop
 test -x /usr/lib/x86_64-linux-gnu/libexec/polkit-kde-authentication-agent-1
 test -f /etc/xdg/autostart/polkit-kde-authentication-agent-1.desktop
 
