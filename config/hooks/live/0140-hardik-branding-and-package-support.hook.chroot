@@ -82,7 +82,9 @@ case "$ext" in
     ;;
   pkg)
     if command -v darling >/dev/null 2>&1; then exec darling shell installer -pkg "/Volumes/SystemRoot$file" -target /; fi
-    zenity --warning --title="HARDIK OS • macOS package" --text="A macOS PKG is not a Linux package. Running it requires experimental Darling; compatibility is limited." 2>/dev/null || true
+    mkdir -p "$HOME/Applications/macOS-PKG-Extracted"
+    7z x "$file" -o"$HOME/Applications/macOS-PKG-Extracted"
+    zenity --warning --title="HARDIK OS • macOS package" --text="The PKG was extracted for inspection. It cannot be installed as a Linux package; running its installer requires experimental Darling and compatibility is limited." 2>/dev/null || true
     exit 1
     ;;
   *) zenity --error --text="Unsupported package type: .$ext" 2>/dev/null || true; exit 1 ;;
