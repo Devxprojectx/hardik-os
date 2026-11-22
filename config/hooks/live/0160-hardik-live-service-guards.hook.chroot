@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-install -d /etc/systemd/system/waydroid-container.service.d /etc/systemd/system/clamav-freshclam-once.service.d
+install -d /etc/systemd/system/waydroid-container.service.d /etc/systemd/system/clamav-freshclam-once.service.d /etc/systemd/system/lxc-net.service.d
 cat > /etc/systemd/system/waydroid-container.service.d/10-hardik-live.conf <<'EOF'
 [Unit]
 # Waydroid's container startup can block the live desktop. It is enabled
@@ -11,6 +11,13 @@ EOF
 cat > /etc/systemd/system/clamav-freshclam-once.service.d/10-hardik-live.conf <<'EOF'
 [Unit]
 # Don't run the one-shot database initializer alongside freshclam on a live USB.
+ConditionKernelCommandLine=!boot=live
+ConditionPathExists=!/run/live/medium
+EOF
+cat > /etc/systemd/system/lxc-net.service.d/10-hardik-live.conf <<'EOF'
+[Unit]
+# The optional LXC bridge setup is unnecessary in the live desktop and can
+# hold up boot on virtualized/network-limited hardware.
 ConditionKernelCommandLine=!boot=live
 ConditionPathExists=!/run/live/medium
 EOF
