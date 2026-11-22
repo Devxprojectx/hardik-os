@@ -95,7 +95,6 @@ qemu-user
 qemu-system-gui
 qemu-system-x86
 binfmt-support
-qemu-user-static
 qemu-system-arm
 qemu-system-misc
 xserver-xorg-input-all
@@ -127,4 +126,5 @@ nftables
 python3-dbus
 python3-gi
 python3-gbinder
+
 
