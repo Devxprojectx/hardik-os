@@ -87,6 +87,10 @@ jobs:
               grep -q "Exec=hardik-installer" /tmp/hardik-installer.desktop
               unsquashfs -cat /mnt/hardik-iso/live/filesystem.squashfs usr/share/wayland-sessions/plasma.desktop > /tmp/hardik-wayland-session.desktop
               grep -q "startplasma-wayland" /tmp/hardik-wayland-session.desktop
+              unsquashfs -cat /mnt/hardik-iso/live/filesystem.squashfs etc/sddm.conf.d/10-hardik-live.conf > /tmp/hardik-sddm-live.conf
+              grep -q "Session=plasmax11.desktop" /tmp/hardik-sddm-live.conf
+              unsquashfs -cat /mnt/hardik-iso/live/filesystem.squashfs usr/share/xsessions/plasmax11.desktop > /tmp/hardik-x11-session.desktop
+              grep -q "startplasma-x11" /tmp/hardik-x11-session.desktop
               unsquashfs -ll /mnt/hardik-iso/live/filesystem.squashfs > /tmp/hardik-squashfs-files.txt
               grep -q "polkit-kde-authentication-agent-1" /tmp/hardik-squashfs-files.txt
               grep -q "hardik-wallpaper.png" /tmp/hardik-squashfs-files.txt
