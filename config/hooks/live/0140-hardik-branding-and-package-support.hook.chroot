@@ -68,6 +68,19 @@ cat > /usr/local/bin/hardik-open-package <<'EOF'
 #!/bin/sh
 file="$1"
 [ -n "$file" ] && [ -f "$file" ] || exit 2
+extract_archive() {
+  source_file="$1"
+  destination="$2"
+  mkdir -p "$destination"
+  if command -v 7zz >/dev/null 2>&1; then
+    7zz x "$source_file" "-o$destination" -y
+  elif command -v 7z >/dev/null 2>&1; then
+    7z x "$source_file" "-o$destination" -y
+  else
+    zenity --error --text="7-Zip extractor is missing." 2>/dev/null || true
+    return 127
+  fi
+}
 ext="$(basename "$file" | awk -F. '{print tolower($NF)}')"
 case "$ext" in
   deb) exec pkexec apt-get install -y "$file" ;;
@@ -77,13 +90,13 @@ case "$ext" in
   dmg)
     if command -v darling >/dev/null 2>&1; then exec darling shell hdiutil attach "/Volumes/SystemRoot$file"; fi
     mkdir -p "$HOME/Applications/macOS-Extracted"
-    7z x "$file" -o"$HOME/Applications/macOS-Extracted"
+    extract_archive "$file" "$HOME/Applications/macOS-Extracted"
     zenity --info --title="HARDIK OS • macOS disk image" --text="The DMG was extracted for inspection. Running macOS apps requires experimental Darling; not all apps work." 2>/dev/null || true
     ;;
   pkg)
     if command -v darling >/dev/null 2>&1; then exec darling shell installer -pkg "/Volumes/SystemRoot$file" -target /; fi
     mkdir -p "$HOME/Applications/macOS-PKG-Extracted"
-    7z x "$file" -o"$HOME/Applications/macOS-PKG-Extracted"
+    extract_archive "$file" "$HOME/Applications/macOS-PKG-Extracted"
     zenity --warning --title="HARDIK OS • macOS package" --text="The PKG was extracted for inspection. It cannot be installed as a Linux package; running its installer requires experimental Darling and compatibility is limited." 2>/dev/null || true
     exit 1
     ;;

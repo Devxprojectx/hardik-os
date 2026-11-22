@@ -94,6 +94,9 @@ jobs:
               unsquashfs -ll /mnt/hardik-iso/live/filesystem.squashfs > /tmp/hardik-squashfs-files.txt
               grep -q "polkit-kde-authentication-agent-1" /tmp/hardik-squashfs-files.txt
               grep -q "hardik-wallpaper.png" /tmp/hardik-squashfs-files.txt
+              unsquashfs -cat /mnt/hardik-iso/live/filesystem.squashfs usr/local/bin/hardik-open-package > /tmp/hardik-package-handler.sh
+              grep -q "command -v 7zz" /tmp/hardik-package-handler.sh
+              grep -q "command -v 7z" /tmp/hardik-package-handler.sh
               echo "Verified Calamares configuration, branded launcher, Polkit agent, and wallpaper inside the ISO."
               # Confirm Waydroid cannot start during live boot (it can hold up graphical startup).
               unsquashfs -cat /mnt/hardik-iso/live/filesystem.squashfs etc/systemd/system/waydroid-container.service.d/10-hardik-live.conf > /tmp/hardik-waydroid-live-guard.conf
