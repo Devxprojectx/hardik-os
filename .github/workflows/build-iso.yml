@@ -104,7 +104,7 @@ jobs:
               unsquashfs -cat /tmp/hardik-filesystem.squashfs etc/systemd/system/hardik-waydroid-firstboot.timer > /tmp/hardik-waydroid-timer.conf
               grep -q "OnBootSec=45s" /tmp/hardik-waydroid-timer.conf
 
-              # Headless QEMU smoke test: boot the ISO's real kernel/initrd with the live ISO attached.
+              # Headless QEMU smoke test: boot the ISO kernel/initrd with the live ISO attached.
               # Serial console makes systemd's graphical target observable in CI.
               # Debian live-build may place kernel/initrd under live/ or install/.
               # Discover the actual files rather than assuming one ISO layout.
