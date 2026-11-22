@@ -106,8 +106,19 @@ jobs:
 
               # Headless QEMU smoke test: boot the ISO's real kernel/initrd with the live ISO attached.
               # Serial console makes systemd's graphical target observable in CI.
-              cp /mnt/hardik-iso/live/vmlinuz /tmp/hardik-vmlinuz
-              cp /mnt/hardik-iso/live/initrd.img /tmp/hardik-initrd.img
+              # Debian live-build may place kernel/initrd under live/ or install/.
+              # Discover the actual files rather than assuming one ISO layout.
+              kernel_path="$(find /mnt/hardik-iso -maxdepth 4 -type f \\( -name 'vmlinuz' -o -name 'vmlinuz-*' \\) -print -quit)"
+              initrd_path="$(find /mnt/hardik-iso -maxdepth 4 -type f \\( -name 'initrd.img' -o -name 'initrd.img-*' \\) -print -quit)"
+              if [ -z "$kernel_path" ] || [ -z "$initrd_path" ]; then
+                echo "Could not locate kernel/initrd in ISO. ISO contents:" >&2
+                find /mnt/hardik-iso -maxdepth 4 -type f -printf '%p\\n' | sort >&2
+                exit 1
+              fi
+              cp "$kernel_path" /tmp/hardik-vmlinuz
+              cp "$initrd_path" /tmp/hardik-initrd.img
+              echo "Using ISO kernel: $kernel_path"
+              echo "Using ISO initrd: $initrd_path"
               rm -f /tmp/hardik-qemu-boot.log
               qemu-system-x86_64 -accel tcg,thread=multi -m 4096 -smp 2 -vga std \
                 -kernel /tmp/hardik-vmlinuz -initrd /tmp/hardik-initrd.img \
