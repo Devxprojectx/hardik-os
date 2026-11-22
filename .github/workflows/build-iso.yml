@@ -74,50 +74,45 @@ jobs:
               xorriso -indev output/hardik-os-0.8.1-amd64.iso -find / -name initrd.img | tee /tmp/hardik-initrd-check.txt
               grep -q "initrd.img" /tmp/hardik-initrd-check.txt
               echo "ISO contains live kernel, initramfs, and root filesystem."
-              mkdir -p /mnt/hardik-iso
-              mount -o loop,ro output/hardik-os-0.8.1-amd64.iso /mnt/hardik-iso
-              test -s /mnt/hardik-iso/live/filesystem.squashfs
-              unsquashfs -cat /mnt/hardik-iso/live/filesystem.squashfs etc/calamares/settings.conf > /tmp/hardik-calamares-settings.conf
+              # Extract ISO payloads with xorriso instead of loop-mounting.
+              # This avoids mount-namespace cleanup races inside the privileged container.
+              xorriso -osirrox on -indev output/hardik-os-0.8.1-amd64.iso -extract /live/filesystem.squashfs /tmp/hardik-filesystem.squashfs
+              test -s /tmp/hardik-filesystem.squashfs
+              unsquashfs -cat /tmp/hardik-filesystem.squashfs etc/calamares/settings.conf > /tmp/hardik-calamares-settings.conf
               grep -q "branding: hardik" /tmp/hardik-calamares-settings.conf
-              unsquashfs -cat /mnt/hardik-iso/live/filesystem.squashfs usr/local/bin/hardik-installer > /tmp/hardik-installer-launcher
+              unsquashfs -cat /tmp/hardik-filesystem.squashfs usr/local/bin/hardik-installer > /tmp/hardik-installer-launcher
               grep -q "pkexec /usr/bin/calamares" /tmp/hardik-installer-launcher
-              unsquashfs -cat /mnt/hardik-iso/live/filesystem.squashfs usr/share/applications/hardik-installer.desktop > /tmp/hardik-installer.desktop
+              unsquashfs -cat /tmp/hardik-filesystem.squashfs usr/share/applications/hardik-installer.desktop > /tmp/hardik-installer.desktop
               grep -q "Name=Install HARDIK OS" /tmp/hardik-installer.desktop
               grep -q "Exec=hardik-installer" /tmp/hardik-installer.desktop
-              unsquashfs -cat /mnt/hardik-iso/live/filesystem.squashfs usr/share/wayland-sessions/plasma.desktop > /tmp/hardik-wayland-session.desktop
+              unsquashfs -cat /tmp/hardik-filesystem.squashfs usr/share/wayland-sessions/plasma.desktop > /tmp/hardik-wayland-session.desktop
               grep -q "startplasma-wayland" /tmp/hardik-wayland-session.desktop
-              unsquashfs -cat /mnt/hardik-iso/live/filesystem.squashfs etc/sddm.conf.d/10-hardik-live.conf > /tmp/hardik-sddm-live.conf
+              unsquashfs -cat /tmp/hardik-filesystem.squashfs etc/sddm.conf.d/10-hardik-live.conf > /tmp/hardik-sddm-live.conf
               grep -q "Session=plasmax11.desktop" /tmp/hardik-sddm-live.conf
-              unsquashfs -cat /mnt/hardik-iso/live/filesystem.squashfs usr/share/xsessions/plasmax11.desktop > /tmp/hardik-x11-session.desktop
+              unsquashfs -cat /tmp/hardik-filesystem.squashfs usr/share/xsessions/plasmax11.desktop > /tmp/hardik-x11-session.desktop
               grep -q "startplasma-x11" /tmp/hardik-x11-session.desktop
-              unsquashfs -ll /mnt/hardik-iso/live/filesystem.squashfs > /tmp/hardik-squashfs-files.txt
+              unsquashfs -ll /tmp/hardik-filesystem.squashfs > /tmp/hardik-squashfs-files.txt
               grep -q "polkit-kde-authentication-agent-1" /tmp/hardik-squashfs-files.txt
               grep -q "hardik-wallpaper.png" /tmp/hardik-squashfs-files.txt
-              unsquashfs -cat /mnt/hardik-iso/live/filesystem.squashfs usr/local/bin/hardik-open-package > /tmp/hardik-package-handler.sh
+              unsquashfs -cat /tmp/hardik-filesystem.squashfs usr/local/bin/hardik-open-package > /tmp/hardik-package-handler.sh
               grep -q "command -v 7zz" /tmp/hardik-package-handler.sh
               grep -q "command -v 7z" /tmp/hardik-package-handler.sh
               echo "Verified Calamares configuration, branded launcher, Polkit agent, and wallpaper inside the ISO."
               # Confirm Waydroid cannot start during live boot (it can hold up graphical startup).
-              unsquashfs -cat /mnt/hardik-iso/live/filesystem.squashfs etc/systemd/system/waydroid-container.service.d/10-hardik-live.conf > /tmp/hardik-waydroid-live-guard.conf
+              unsquashfs -cat /tmp/hardik-filesystem.squashfs etc/systemd/system/waydroid-container.service.d/10-hardik-live.conf > /tmp/hardik-waydroid-live-guard.conf
               grep -q "ConditionKernelCommandLine=!boot=live" /tmp/hardik-waydroid-live-guard.conf
-              unsquashfs -cat /mnt/hardik-iso/live/filesystem.squashfs etc/systemd/system/hardik-waydroid-firstboot.timer > /tmp/hardik-waydroid-timer.conf
+              unsquashfs -cat /tmp/hardik-filesystem.squashfs etc/systemd/system/hardik-waydroid-firstboot.timer > /tmp/hardik-waydroid-timer.conf
               grep -q "OnBootSec=45s" /tmp/hardik-waydroid-timer.conf
 
               # Headless QEMU smoke test: boot the ISO's real kernel/initrd with the live ISO attached.
               # Serial console makes systemd's graphical target observable in CI.
               # Debian live-build may place kernel/initrd under live/ or install/.
               # Discover the actual files rather than assuming one ISO layout.
-              kernel_path="$(find /mnt/hardik-iso -maxdepth 4 -type f -name 'vmlinuz*' -print -quit)"
-              initrd_path="$(find /mnt/hardik-iso -maxdepth 4 -type f -name 'initrd.img*' -print -quit)"
-              if [ -z "$kernel_path" ] || [ -z "$initrd_path" ]; then
-                echo "Could not locate kernel/initrd in ISO. ISO contents:" >&2
-                find /mnt/hardik-iso -maxdepth 4 -type f -printf '%p\\n' | sort >&2
-                exit 1
-              fi
-              cp "$kernel_path" /tmp/hardik-vmlinuz
-              cp "$initrd_path" /tmp/hardik-initrd.img
-              echo "Using ISO kernel: $kernel_path"
-              echo "Using ISO initrd: $initrd_path"
+              xorriso -osirrox on -indev output/hardik-os-0.8.1-amd64.iso -extract /live/vmlinuz /tmp/hardik-vmlinuz
+              xorriso -osirrox on -indev output/hardik-os-0.8.1-amd64.iso -extract /live/initrd.img /tmp/hardik-initrd.img
+              test -s /tmp/hardik-vmlinuz
+              test -s /tmp/hardik-initrd.img
+              echo "Extracted ISO kernel and initrd directly with xorriso."
               rm -f /tmp/hardik-qemu-boot.log
               qemu-system-x86_64 -accel tcg,thread=multi -m 4096 -smp 2 -vga std \
                 -kernel /tmp/hardik-vmlinuz -initrd /tmp/hardik-initrd.img \
@@ -139,7 +134,6 @@ jobs:
               cat /tmp/hardik-qemu-boot.log
               test "$boot_ok" -eq 1 || { echo "QEMU failed to reach graphical.target; inspect boot log above." >&2; exit 1; }
               echo "Headless QEMU boot smoke test passed: graphical.target reached."
-              umount /mnt/hardik-iso
               sha256sum -c output/SHA256SUMS
             '
       - name: Upload verified ISO
