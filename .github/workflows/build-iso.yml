@@ -108,8 +108,8 @@ jobs:
               # Serial console makes systemd's graphical target observable in CI.
               # Debian live-build may place kernel/initrd under live/ or install/.
               # Discover the actual files rather than assuming one ISO layout.
-              kernel_path="$(find /mnt/hardik-iso -maxdepth 4 -type f \\( -name 'vmlinuz' -o -name 'vmlinuz-*' \\) -print -quit)"
-              initrd_path="$(find /mnt/hardik-iso -maxdepth 4 -type f \\( -name 'initrd.img' -o -name 'initrd.img-*' \\) -print -quit)"
+              kernel_path="$(find /mnt/hardik-iso -maxdepth 4 -type f -name 'vmlinuz*' -print -quit)"
+              initrd_path="$(find /mnt/hardik-iso -maxdepth 4 -type f -name 'initrd.img*' -print -quit)"
               if [ -z "$kernel_path" ] || [ -z "$initrd_path" ]; then
                 echo "Could not locate kernel/initrd in ISO. ISO contents:" >&2
                 find /mnt/hardik-iso -maxdepth 4 -type f -printf '%p\\n' | sort >&2
