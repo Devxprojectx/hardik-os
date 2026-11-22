@@ -97,13 +97,15 @@ jobs:
               unsquashfs -cat /mnt/hardik-iso/live/filesystem.squashfs etc/systemd/system/hardik-waydroid-firstboot.timer > /tmp/hardik-waydroid-timer.conf
               grep -q "OnBootSec=45s" /tmp/hardik-waydroid-timer.conf
 
-              # Headless QEMU smoke test: boot through the ISO's own BIOS bootloader, as users do.
-              # Wait for the actual live graphical target, not just kernel or SDDM startup.
+              # Headless QEMU smoke test: boot the ISO's real kernel/initrd with the live ISO attached.
+              # Serial console makes systemd's graphical target observable in CI.
               cp /mnt/hardik-iso/live/vmlinuz /tmp/hardik-vmlinuz
               cp /mnt/hardik-iso/live/initrd.img /tmp/hardik-initrd.img
               rm -f /tmp/hardik-qemu-boot.log
               qemu-system-x86_64 -accel tcg,thread=multi -m 4096 -smp 2 -vga std \
-                -cdrom /workspace/output/hardik-os-0.8.1-amd64.iso -boot d \
+                -kernel /tmp/hardik-vmlinuz -initrd /tmp/hardik-initrd.img \
+                -append "boot=live components username=hardik hostname=hardik-os console=ttyS0,115200n8 systemd.log_target=console systemd.log_level=info splash" \
+                -drive file=/workspace/output/hardik-os-0.8.1-amd64.iso,media=cdrom,readonly=on,if=ide \
                 -display none -serial file:/tmp/hardik-qemu-boot.log -monitor none -no-reboot &
               qemu_pid=$!
               boot_ok=0
