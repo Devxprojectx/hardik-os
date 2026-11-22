@@ -4,12 +4,11 @@ install -d /usr/local/sbin /etc/systemd/system
 cat > /usr/local/sbin/hardik-waydroid-firstboot <<'EOF'
 #!/usr/bin/env bash
 set -Eeuo pipefail
-# Live USB contains the package but does not initialize or run the Android container.
 if grep -qw 'boot=live' /proc/cmdline || [ -e /run/live/medium ]; then exit 0; fi
 if [ -e /var/lib/waydroid/.hardik-initialized ]; then exit 0; fi
 if ! grep -qw binderfs /proc/filesystems && ! grep -qw binder /proc/filesystems && [ ! -e /dev/binder ] && [ ! -d /sys/module/binder_linux ]; then
- echo "Waydroid requires kernel Binder support. Android setup remains pending." >&2
- exit 1
+  echo "Waydroid requires kernel Binder support; Android setup will retry later." >&2
+  exit 1
 fi
 modprobe binder_linux devices=binder,hwbinder,vndbinder || modprobe binder_linux
 waydroid init
@@ -29,8 +28,17 @@ ConditionPathExists=!/var/lib/waydroid/.hardik-initialized
 [Service]
 Type=oneshot
 ExecStart=/usr/local/sbin/hardik-waydroid-firstboot
-RemainAfterExit=yes
-[Install]
-WantedBy=multi-user.target
+TimeoutStartSec=0
 EOF
-systemctl enable hardik-waydroid-firstboot.service 2>/dev/null || true
+cat > /etc/systemd/system/hardik-waydroid-firstboot.timer <<'EOF'
+[Unit]
+Description=Delayed non-blocking HARDIK OS Android setup
+[Timer]
+OnBootSec=45s
+OnUnitActiveSec=15min
+Persistent=true
+Unit=hardik-waydroid-firstboot.service
+[Install]
+WantedBy=timers.target
+EOF
+systemctl enable hardik-waydroid-firstboot.timer 2>/dev/null || true

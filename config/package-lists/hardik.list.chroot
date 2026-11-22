@@ -94,6 +94,13 @@ qemu-user-binfmt
 qemu-user
 qemu-system-gui
 qemu-system-x86
+binfmt-support
+qemu-user-static
+qemu-system-arm
+qemu-system-misc
+xserver-xorg-input-all
+xserver-xorg-video-all
+xserver-xorg
 zram-tools
 polkit-kde-agent-1
 pkexec

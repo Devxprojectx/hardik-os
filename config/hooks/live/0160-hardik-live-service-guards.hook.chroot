@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+install -d /etc/systemd/system/waydroid-container.service.d /etc/systemd/system/clamav-freshclam-once.service.d
+cat > /etc/systemd/system/waydroid-container.service.d/10-hardik-live.conf <<'EOF'
+[Unit]
+# Waydroid's container startup can block the live desktop. It is enabled
+# after the installed system's delayed first-boot Android setup instead.
+ConditionKernelCommandLine=!boot=live
+ConditionPathExists=!/run/live/medium
+EOF
+cat > /etc/systemd/system/clamav-freshclam-once.service.d/10-hardik-live.conf <<'EOF'
+[Unit]
+# Don't run the one-shot database initializer alongside freshclam on a live USB.
+ConditionKernelCommandLine=!boot=live
+ConditionPathExists=!/run/live/medium
+EOF
+systemctl disable waydroid-container.service 2>/dev/null || true
