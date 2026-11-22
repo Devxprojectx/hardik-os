@@ -126,5 +126,14 @@ nftables
 python3-dbus
 python3-gi
 python3-gbinder
-
-
+# Full desktop productivity and creative suite (installed, not running at idle)
+libreoffice-writer
+libreoffice-calc
+libreoffice-impress
+vlc
+gimp
+inkscape
+kdenlive
+audacity
+obs-studio
+blender

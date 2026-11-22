@@ -76,7 +76,6 @@ jobs:
               echo "ISO contains live kernel, initramfs, and root filesystem."
               mkdir -p /mnt/hardik-iso
               mount -o loop,ro output/hardik-os-0.8.1-amd64.iso /mnt/hardik-iso
-              trap "umount /mnt/hardik-iso 2>/dev/null || true" EXIT
               test -s /mnt/hardik-iso/live/filesystem.squashfs
               unsquashfs -cat /mnt/hardik-iso/live/filesystem.squashfs etc/calamares/settings.conf > /tmp/hardik-calamares-settings.conf
               grep -q "branding: hardik" /tmp/hardik-calamares-settings.conf
@@ -141,7 +140,6 @@ jobs:
               test "$boot_ok" -eq 1 || { echo "QEMU failed to reach graphical.target; inspect boot log above." >&2; exit 1; }
               echo "Headless QEMU boot smoke test passed: graphical.target reached."
               umount /mnt/hardik-iso
-              trap - EXIT
               sha256sum -c output/SHA256SUMS
             '
       - name: Upload verified ISO
