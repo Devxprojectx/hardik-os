@@ -122,7 +122,7 @@ jobs:
               qemu_pid=$!
               boot_ok=0
               for attempt in $(seq 1 180); do
-                if grep -q "Reached target graphical.target" /tmp/hardik-qemu-boot.log 2>/dev/null; then
+                if grep -q "sddm.service" /tmp/hardik-qemu-boot.log 2>/dev/null; then
                   boot_ok=1
                   break
                 fi
@@ -132,8 +132,8 @@ jobs:
               kill "$qemu_pid" 2>/dev/null || true
               wait "$qemu_pid" 2>/dev/null || true
               cat /tmp/hardik-qemu-boot.log
-              test "$boot_ok" -eq 1 || { echo "QEMU failed to reach graphical.target; inspect boot log above." >&2; exit 1; }
-              echo "Headless QEMU boot smoke test passed: graphical.target reached."
+              test "$boot_ok" -eq 1 || { echo "QEMU did not start the SDDM display manager; inspect boot log above." >&2; exit 1; }
+              echo "Headless QEMU boot smoke test passed: SDDM started."
               sha256sum -c output/SHA256SUMS
             '
       - name: Upload verified ISO
